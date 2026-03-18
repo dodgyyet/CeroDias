@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel — CeroDias Certmaster{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h2>&#9881; Admin Panel</h2>
+        <p style="color: var(--muted); margin-top: 0.25rem;">Platform management and configuration.</p>
+    </div>
+
+    <!-- Stats row -->
+    <div class="admin-stats-row">
+        <div class="stat-card" id="stat-players">
+            <div class="stat-value">—</div>
+            <div class="stat-label">Total Players</div>
+        </div>
+        <div class="stat-card" id="stat-challenges">
+            <div class="stat-value">—</div>
+            <div class="stat-label">Total Challenges</div>
+        </div>
+        <div class="stat-card" id="stat-leaderboard">
+            <div class="stat-value">—</div>
+            <div class="stat-label">Leaderboard Entries</div>
+        </div>
+    </div>
+
+    <!-- Platform management -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">Platform Management</div>
+        <div class="card-body">
+            <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                View real-time platform statistics above. Use the controls below to manage game state.
+            </p>
+            <a href="/leaderboard" class="btn btn-secondary btn-sm">View Leaderboard</a>
+        </div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="danger-zone-card">
+        <div class="card-header">&#9888; Danger Zone</div>
+        <div class="card-body">
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--danger);">Reset All Game Data</h3>
+            <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                This will permanently clear all players, challenge progress, and scores. <strong>This action cannot be undone.</strong>
+            </p>
+            <button type="button" class="btn btn-danger" id="open-reset-modal">
+                &#128465; Reset Game
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Modal -->
+<div class="modal-overlay" id="reset-modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>Confirm Reset</span>
+            <button id="close-reset-modal">&#10005;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                This will delete all player data, scores, and challenge progress. Enter the admin password to confirm.
+            </p>
+            <div class="form-group">
+                <label for="reset-password" class="form-label">Admin Password</label>
+                <input type="password" id="reset-password" class="form-control" placeholder="Enter password">
+            </div>
+            <div id="reset-error"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" id="cancel-reset">Cancel</button>
+            <button type="button" class="btn btn-danger btn-sm" id="confirm-reset">Confirm Reset</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load stats
+async function loadStats() {
+    const response = await fetch('/admin/stats');
+    const data = await response.json();
+    document.getElementById('stat-players').querySelector('.stat-value').textContent = data.total_players;
+    document.getElementById('stat-challenges').querySelector('.stat-value').textContent = data.total_challenges;
+    document.getElementById('stat-leaderboard').querySelector('.stat-value').textContent = data.leaderboard_entries;
+}
+
+loadStats();
+
+// Modal
+const overlay = document.getElementById('reset-modal-overlay');
+document.getElementById('open-reset-modal').addEventListener('click', () => overlay.classList.add('active'));
+document.getElementById('close-reset-modal').addEventListener('click', () => overlay.classList.remove('active'));
+document.getElementById('cancel-reset').addEventListener('click', () => overlay.classList.remove('active'));
+overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('active'); });
+
+document.getElementById('confirm-reset').addEventListener('click', async function() {
+    const password = document.getElementById('reset-password').value;
+    const errDiv = document.getElementById('reset-error');
+
+    const response = await fetch('/admin/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `password=${encodeURIComponent(password)}`
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+        overlay.classList.remove('active');
+        loadStats();
+    } else {
+        errDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+    }
+});
+</script>
+{% endblock %}

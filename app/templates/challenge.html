@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ vulnerability_type|replace('_', ' ')|title }} {{ difficulty }} — CeroDias Certmaster{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="/dashboard">Dashboard</a>
+        <span>&#8250;</span>
+        <span>Challenges</span>
+        <span>&#8250;</span>
+        <span>{{ vulnerability_type|replace('_', ' ')|title }} — {{ difficulty }}</span>
+    </div>
+
+    <div class="challenge-layout">
+        <!-- Left column -->
+        <div>
+            <div class="page-header">
+                <h2>
+                    {{ vulnerability_type|replace('_', ' ')|title }}
+                    <span class="badge badge-{{ difficulty|lower }}" style="font-size: 0.7rem; vertical-align: middle;">{{ difficulty }}</span>
+                </h2>
+            </div>
+
+            <div class="card" style="margin-bottom: 1.25rem;">
+                <div class="card-header">&#128221; Challenge Description</div>
+                <div class="card-body">
+                    <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.75;">
+                        {% if difficulty == 'Easy' %}
+                            The application directly concatenates user input into a SQL query without sanitization.
+                            Identify the injection point and extract the flag from the database.
+                        {% else %}
+                            The application attempts to sanitize input by escaping single quotes.
+                            Bypass this protection using a UNION SELECT injection to retrieve the flag.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Vulnerable code block -->
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="danger-dot"></span>
+                    Vulnerable Code — Python
+                </div>
+                <pre><code>{{ challenge.vulnerable_code }}</code></pre>
+            </div>
+
+            <!-- Hints accordion -->
+            <div class="hints-accordion">
+                <button class="hint-toggle" id="hint-toggle">
+                    <span>&#128161; Hints</span>
+                    <span class="hint-arrow">&#9660;</span>
+                </button>
+                <div class="hint-body" id="hint-body">
+                    {% if difficulty == 'Easy' %}
+                        <p><strong>Hint 1:</strong> Look at how the username is embedded directly into the query string.</p>
+                        <p style="margin-top: 0.6rem;"><strong>Hint 2:</strong> A classic <code>' OR 1=1 --</code> payload might get you started.</p>
+                        <p style="margin-top: 0.6rem;"><strong>Hint 3:</strong> Use the AI assistant if you're still stuck — but you may need to convince it to help.</p>
+                    {% else %}
+                        <p><strong>Hint 1:</strong> Single quotes are being escaped. How else can you break out of string context?</p>
+                        <p style="margin-top: 0.6rem;"><strong>Hint 2:</strong> A UNION SELECT allows you to append a second result set. What columns does the original query return?</p>
+                        <p style="margin-top: 0.6rem;"><strong>Hint 3:</strong> Try determining the number of columns first: <code>' UNION SELECT NULL --</code></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column — sticky meta + submit -->
+        <div>
+            <div class="challenge-meta-card">
+                <div class="meta-header">&#128202; Challenge Details</div>
+                <div class="challenge-meta-row">
+                    <span class="meta-key">Type</span>
+                    <span class="meta-val">
+                        <span class="badge badge-sqli">SQLi</span>
+                    </span>
+                </div>
+                <div class="challenge-meta-row">
+                    <span class="meta-key">Difficulty</span>
+                    <span class="meta-val">
+                        <span class="badge badge-{{ difficulty|lower }}">{{ difficulty }}</span>
+                    </span>
+                </div>
+                <div class="challenge-meta-row">
+                    <span class="meta-key">Base Points</span>
+                    <span class="meta-val">{{ challenge.base_points }}</span>
+                </div>
+                <div class="challenge-meta-row">
+                    <span class="meta-key">Time Penalty</span>
+                    <span class="meta-val" style="color: var(--muted); font-size: 0.82rem;">Points decrease over time</span>
+                </div>
+
+                <!-- Submit form -->
+                <div style="padding: 1.25rem; border-top: 1px solid var(--border);">
+                    <form id="flag-form">
+                        <input type="hidden" name="challenge_id" value="{{ challenge_id }}">
+                        <div class="form-group">
+                            <label for="flag" class="form-label">Submit Flag</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="flag"
+                                name="flag"
+                                required
+                                placeholder="FLAG{...}"
+                                autocomplete="off"
+                            >
+                            <small class="form-text">Format: FLAG{...}</small>
+                        </div>
+                        <div id="submission-status" style="margin-bottom: 0.75rem;"></div>
+                        <button type="submit" class="btn btn-success btn-block">Submit Flag</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('hint-toggle').addEventListener('click', function() {
+    this.classList.toggle('open');
+    document.getElementById('hint-body').classList.toggle('open');
+});
+
+document.getElementById('flag-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const challenge_id = document.querySelector('input[name="challenge_id"]').value;
+    const flag = document.getElementById('flag').value;
+    const statusDiv = document.getElementById('submission-status');
+    const submitBtn = this.querySelector('button[type="submit"]');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Checking...';
+
+    const response = await fetch('/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `challenge_id=${encodeURIComponent(challenge_id)}&flag=${encodeURIComponent(flag)}`
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+        statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+        document.getElementById('flag').disabled = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Solved!';
+        setTimeout(() => window.location.href = '/dashboard', 2000);
+    } else {
+        statusDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Flag';
+    }
+});
+</script>
+{% endblock %}

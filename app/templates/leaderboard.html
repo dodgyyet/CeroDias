@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard — CeroDias Certmaster{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h2>Global Leaderboard</h2>
+        <p style="color: var(--muted); margin-top: 0.25rem;">Top players ranked by total points earned.</p>
+    </div>
+
+    {% if session.get('username') %}
+        {% set my_rank = namespace(value=0) %}
+        {% for i, entry in enumerate(leaderboard, 1) %}
+            {% if entry.username == session.get('username') %}{% set my_rank.value = i %}{% endif %}
+        {% endfor %}
+        {% if my_rank.value %}
+            <div class="leaderboard-banner">
+                &#127942; You are currently ranked <strong>#{{ my_rank.value }}</strong> on the global leaderboard.
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <div class="leaderboard-card">
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th class="rank-cell">Rank</th>
+                    <th>Player</th>
+                    <th>Points</th>
+                    <th>Challenges</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if leaderboard %}
+                    {% for i, entry in enumerate(leaderboard, 1) %}
+                        <tr {% if entry.username == session.get('username') %}class="is-me"{% endif %}>
+                            <td class="rank-cell">
+                                {% if i == 1 %}
+                                    <span class="rank-badge rank-gold">&#127947;</span>
+                                {% elif i == 2 %}
+                                    <span class="rank-badge rank-silver">&#129689;</span>
+                                {% elif i == 3 %}
+                                    <span class="rank-badge rank-bronze">&#129688;</span>
+                                {% else %}
+                                    <span style="color: var(--muted); font-weight: 600;">{{ i }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="player-name-cell">
+                                {{ entry.username }}
+                                {% if entry.username == session.get('username') %}
+                                    <span class="you-tag">You</span>
+                                {% endif %}
+                            </td>
+                            <td class="points-cell">{{ entry.total_points }}</td>
+                            <td style="color: var(--muted);">{{ entry.challenges_solved }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--muted); padding: 2rem;">
+                            No players yet. <a href="/register">Be the first!</a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

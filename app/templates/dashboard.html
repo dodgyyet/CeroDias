@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — CeroDias Certmaster{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Page header -->
+    <div class="page-header">
+        <h2>Welcome back, {{ username }}!</h2>
+        <p style="color: var(--muted); margin-top: 0.25rem;">Continue where you left off or start a new challenge.</p>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value">{{ player.total_points }}</div>
+            <div class="stat-label">Total Points</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ player.solved_challenges|length }}</div>
+            <div class="stat-label">Challenges Solved</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% set rank = namespace(value='—') %}
+                {% for i, entry in enumerate(leaderboard, 1) %}
+                    {% if entry.player_id == player.id %}{% set rank.value = '#' ~ i %}{% endif %}
+                {% endfor %}
+                {{ rank.value }}
+            </div>
+            <div class="stat-label">Your Rank</div>
+        </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="dashboard-grid">
+        <!-- Challenges column -->
+        <div>
+            <div class="section-title">Available Challenges</div>
+
+            <!-- SQL Injection category -->
+            <div class="card" style="margin-bottom: 1rem;">
+                <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+                    <span>SQL Injection</span>
+                    <span class="badge badge-sqli">SQLi</span>
+                </div>
+                <div class="card-body" style="padding: 0.5rem 0;">
+                    <!-- Easy -->
+                    <div class="challenge-card {% if 'sql_injection_Easy' in player.solved_challenges %}solved{% endif %}">
+                        <div class="challenge-card-icon">&#128273;</div>
+                        <div class="challenge-card-body">
+                            <div class="challenge-card-title">SQL Injection — Easy</div>
+                            <div class="challenge-card-meta">
+                                <span class="badge badge-easy">Easy</span>
+                                <span>Direct string concatenation</span>
+                                {% if 'sql_injection_Easy' in player.solved_challenges %}
+                                    <span class="badge badge-navy">&#10003; Solved</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="challenge-card-actions">
+                            <span class="points-pill">100 pts</span>
+                            {% if 'sql_injection_Easy' in player.solved_challenges %}
+                                <a href="/challenge/sql_injection/Easy" class="btn btn-secondary btn-sm">Review</a>
+                            {% else %}
+                                <a href="/challenge/sql_injection/Easy" class="btn btn-primary btn-sm">Start &rarr;</a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Medium -->
+                    <div class="challenge-card {% if 'sql_injection_Medium' in player.solved_challenges %}solved{% endif %}">
+                        <div class="challenge-card-icon">&#128275;</div>
+                        <div class="challenge-card-body">
+                            <div class="challenge-card-title">SQL Injection — Medium</div>
+                            <div class="challenge-card-meta">
+                                <span class="badge badge-medium">Medium</span>
+                                <span>Quote escaping, UNION SELECT required</span>
+                                {% if 'sql_injection_Medium' in player.solved_challenges %}
+                                    <span class="badge badge-navy">&#10003; Solved</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="challenge-card-actions">
+                            <span class="points-pill">150 pts</span>
+                            {% if 'sql_injection_Medium' in player.solved_challenges %}
+                                <a href="/challenge/sql_injection/Medium" class="btn btn-secondary btn-sm">Review</a>
+                            {% else %}
+                                <a href="/challenge/sql_injection/Medium" class="btn btn-primary btn-sm">Start &rarr;</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hint -->
+            <div class="alert alert-info" style="font-size: 0.85rem;">
+                <strong>&#128161; Tip:</strong> The platform has more attack surfaces than the listed challenges. Explore everything.
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div>
+            <div class="card">
+                <div class="card-header">&#127942; Top Players</div>
+                <div class="card-body" style="padding: 0 1.25rem;">
+                    {% if leaderboard %}
+                        {% for i, entry in enumerate(leaderboard[:5], 1) %}
+                            <div class="mini-leaderboard-row {% if entry.player_id == player.id %}mini-leaderboard-me{% endif %}">
+                                <div class="mini-leaderboard-rank">
+                                    {% if i == 1 %}&#127947;
+                                    {% elif i == 2 %}&#129689;
+                                    {% elif i == 3 %}&#129688;
+                                    {% else %}{{ i }}{% endif %}
+                                </div>
+                                <div class="mini-leaderboard-name">
+                                    {{ entry.username }}
+                                    {% if entry.player_id == player.id %}<span class="you-tag">You</span>{% endif %}
+                                </div>
+                                <div class="mini-leaderboard-pts">{{ entry.total_points }}</div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color: var(--muted); font-size: 0.85rem; padding: 1rem 0;">No players yet.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="/leaderboard" class="btn btn-secondary btn-sm" style="width: 100%;">Full Leaderboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

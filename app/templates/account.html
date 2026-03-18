@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}My Account — CeroDias Certmaster{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h2>My Account</h2>
+        <p style="color: var(--muted); margin-top: 0.25rem;">Welcome back, <strong>{{ username }}</strong>. Manage your certifications and purchase history.</p>
+    </div>
+
+    <!-- Account stats -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 2rem;">
+        <div class="stat-card">
+            <div class="stat-value">{{ orders|length }}</div>
+            <div class="stat-label">Total Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% set issued = orders | selectattr('status', 'equalto', 'issued') | list %}
+                {{ issued|length }}
+            </div>
+            <div class="stat-label">Active Vouchers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% set redeemed = orders | selectattr('status', 'equalto', 'redeemed') | list %}
+                {{ redeemed|length }}
+            </div>
+            <div class="stat-label">Redeemed</div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; align-items: start;">
+        <!-- Order history -->
+        <div>
+            <div class="section-title">Order History</div>
+            <div class="leaderboard-card">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Certification</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Voucher</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td style="font-weight: 700; color: var(--navy);">#{{ order.order_id }}</td>
+                            <td>{{ order.cert }}</td>
+                            <td style="color: var(--muted); font-size: 0.85rem;">{{ order.date }}</td>
+                            <td style="font-weight: 600;">${{ order.total }}</td>
+                            <td style="font-family: monospace; font-size: 0.82rem; color: var(--muted);">{{ order.voucher_code }}</td>
+                            <td>
+                                {% if order.status == 'issued' %}
+                                    <span class="badge badge-easy">Active</span>
+                                {% elif order.status == 'redeemed' %}
+                                    <span class="badge badge-navy">Redeemed</span>
+                                {% else %}
+                                    <span class="badge" style="background:#F3F4F6;color:#374151;">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div>
+            <!-- Quick buy -->
+            <div class="card" style="margin-bottom: 1.25rem;">
+                <div class="card-header">&#127881; Purchase a Voucher</div>
+                <div class="card-body">
+                    <form method="POST" action="/purchase">
+                        <div class="form-group">
+                            <label class="form-label">Certification</label>
+                            <select name="cert_id" class="form-control">
+                                <option value="a-">CeroDias A- — $219</option>
+                                <option value="network-">CeroDias Network- — $349</option>
+                                <option value="security-">CeroDias Security- — $392</option>
+                                <option value="linux-">CeroDias Linux- — $338</option>
+                                <option value="pentest-">CeroDias PenTest- — $466</option>
+                                <option value="cloud-">CeroDias Cloud- — $359</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" name="quantity" class="form-control" value="1" min="1">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Buy Voucher &rarr;</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Profile card -->
+            <div class="card">
+                <div class="card-header">&#128100; Profile</div>
+                <div class="card-body">
+                    <div class="challenge-meta-row" style="border-bottom: 1px solid var(--border);">
+                        <span class="meta-key">Username</span>
+                        <span class="meta-val">{{ username }}</span>
+                    </div>
+                    <div class="challenge-meta-row" style="border-bottom: 1px solid var(--border);">
+                        <span class="meta-key">Account type</span>
+                        <span class="meta-val"><span class="badge badge-navy">Standard</span></span>
+                    </div>
+                    <div class="challenge-meta-row">
+                        <span class="meta-key">Member since</span>
+                        <span class="meta-val" style="color:var(--muted);">2026</span>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <a href="/logout" class="btn btn-secondary btn-sm btn-block">Logout</a>
+                        <a href="/account/settings" class="btn btn-secondary btn-sm btn-block" style="margin-top: 0.5rem;">Settings</a>
+                        <a href="/messages" class="btn btn-secondary btn-sm btn-block" style="margin-top: 0.25rem;">Messages</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

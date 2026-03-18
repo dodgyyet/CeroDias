@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Account Settings — CeroDias{% endblock %}
+{% block content %}
+<div class="container mt-4" style="max-width:600px;">
+  <h4>Account Settings</h4>
+  <div class="card mt-3">
+    <div class="card-body">
+      <h6 class="card-title">Profile Picture</h6>
+      <p class="text-muted small">Accepted formats: PNG, JPEG, GIF, WebP. Max 2 MB.</p>
+
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      {% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
+      {% if avatar_url %}
+        <img src="{{ avatar_url }}" alt="Profile" class="mb-3 rounded"
+             style="max-width:120px; max-height:120px;">
+      {% endif %}
+
+      <!-- profile image upload — processed server-side by image handler -->
+      <!-- assets served from /static/uploads/ -->
+      <form method="POST" action="/account/settings/avatar"
+            enctype="multipart/form-data"
+            data-handler="php-image-processor">
+        <div class="mb-3">
+          <input type="file" class="form-control" name="avatar"
+                 accept="image/*" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

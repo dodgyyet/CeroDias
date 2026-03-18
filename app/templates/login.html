@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up — CeroDias Certmaster{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-wrapper">
+        <!-- Left panel — Branding -->
+        <div class="auth-branding">
+            <div class="auth-branding-logo">CeroDias<span class="brand-dot">.</span></div>
+            <h2>Start Your Security Journey</h2>
+            <p>Join thousands of learners practicing real-world penetration testing skills in a safe, legal environment.</p>
+            <div class="branding-features">
+                <div class="branding-feature">
+                    <span class="check-mark">&#10003;</span>
+                    <span>Real vulnerable applications to exploit</span>
+                </div>
+                <div class="branding-feature">
+                    <span class="check-mark">&#10003;</span>
+                    <span>Earn points and climb the leaderboard</span>
+                </div>
+                <div class="branding-feature">
+                    <span class="check-mark">&#10003;</span>
+                    <span>AI-powered assistant for guided hints</span>
+                </div>
+                <div class="branding-feature">
+                    <span class="check-mark">&#10003;</span>
+                    <span>CompTIA Security+ aligned challenges</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right panel — Form -->
+        <div class="auth-form-container">
+            <div class="auth-form">
+                <h2>Create Your Account</h2>
+                <p class="form-subtitle">Choose a username to get started — no email required.</p>
+
+                {% if error %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="username" class="form-label">Username</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="username"
+                            name="username"
+                            placeholder="e.g. darkhopper99"
+                            required
+                            minlength="3"
+                            autocomplete="username"
+                        >
+                        <small class="form-text">Minimum 3 characters. This is your public handle on the leaderboard.</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block btn-lg">Get Started &rarr;</button>
+                </form>
+
+                <div class="auth-footer">
+                    <p>Already playing? <a href="/">Back to Home</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

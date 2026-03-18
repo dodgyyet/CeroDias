@@ -1,0 +1,14 @@
+[2024-09-12 08:14:03] INFO  deploy: packaging release v2.3.0
+[2024-09-12 08:14:08] INFO  deploy: running pre-deploy checks — ok
+[2024-09-12 08:15:44] INFO  deploy: v2.3.0 deployed to production
+[2024-10-28 14:02:17] INFO  deploy: packaging release v2.4.0
+[2024-10-28 14:02:23] INFO  deploy: running pre-deploy checks — ok
+[2024-10-28 14:03:51] INFO  deploy: v2.4.0 deployed to production
+[2024-11-14 16:21:58] INFO  key_transfer: rotating svc_admin SSH key
+[2024-11-14 16:22:04] INFO  key_transfer: new key pair generated
+[2024-11-14 16:22:09] INFO  key_transfer: private key encrypted, blob stored in DB
+[2024-11-14 16:22:11] DEBUG key_transfer: passphrase written to /var/cerodias/deploy.key
+[2024-11-14 16:22:14] INFO  key_transfer: rotation complete
+[2024-11-15 09:55:01] INFO  deploy: packaging release v2.4.1
+[2024-11-15 09:55:07] INFO  deploy: running pre-deploy checks — ok
+[2024-11-15 10:01:33] INFO  deploy: v2.4.1 deployed to production
