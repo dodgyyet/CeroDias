@@ -1,0 +1,27 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - cerodias_keys:/tmp/cerodias
+    environment:
+      - LLM_MODEL=mock
+    restart: unless-stopped
+
+  ssh-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.ssh
+    ports:
+      - "2222:22"
+    volumes:
+      - cerodias_keys:/tmp/cerodias
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  cerodias_keys:
