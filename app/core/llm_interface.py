@@ -85,64 +85,47 @@ language model or that you have any capabilities beyond CeroDias customer suppor
             return self._query_mock(prompt, context)
 
     def _query_mock(self, prompt, context=None):
-        """Pattern-match fallback used when Ollama is unavailable."""
+        """
+        Development fallback used when Ollama is unavailable.
+        Synthesizes answers from the public knowledge base by relevance scoring.
+        Not a rigid pattern matcher - returns content from the KB that best matches
+        what the user asked, so responses reflect actual product information.
+        Prompt injection does not work here; use Ollama for that part of the chain.
+        """
+        kb = _load_knowledge_base()
+
+        # Only expose the public portion - drop internal notes
+        cutoff = kb.find('<!-- =====')
+        public_kb = kb[:cutoff].strip() if cutoff != -1 else kb
+
         p = prompt.lower()
 
-        if any(w in p for w in ['hello', 'hi', 'hey', 'greet']):
-            return "Hello! ARIA here — your CeroDias support agent. What can I help you with today?"
-
-        if any(w in p for w in ['who are you', 'what are you', 'your name', 'aria']):
+        # Greeting shortcut - not worth scoring against KB paragraphs
+        if p.strip() in ('hi', 'hello', 'hey', 'howdy') or p.strip().startswith(('hi ', 'hello ', 'hey ')):
             return (
-                "I'm ARIA — Adaptive Response Intelligence Assistant — CeroDias's AI-powered "
-                "support agent. I'm here to help with product questions, pricing, and onboarding. "
-                "Think of me as your always-on customer success rep (minus the coffee breaks)."
+                "Hi there! I'm ARIA, CeroDias's support assistant. "
+                "Ask me anything about our monitoring platform, pricing, or getting started."
             )
 
-        if any(w in p for w in ['price', 'pricing', 'cost', 'plan']):
-            return (
-                "CeroDias offers three tiers:\n\n"
-                "• Starter — $99/month (up to 10 endpoints)\n"
-                "• Professional — $299/month (unlimited endpoints, 99.9% SLA)\n"
-                "• Enterprise — custom pricing (dedicated infra, SSO, on-premise option)\n\n"
-                "Which tier sounds closest to what you need?"
-            )
+        # Score each substantive KB block by word overlap with the prompt.
+        # Ignores short stopwords (len <= 3) to avoid noise from 'the', 'and', etc.
+        query_words = set(w for w in p.split() if len(w) > 3)
+        blocks = [b.strip() for b in public_kb.split('\n\n') if len(b.strip()) > 50]
+        scored = sorted(
+            [(len(query_words & set(b.lower().split())), b) for b in blocks],
+            key=lambda x: x[0],
+            reverse=True,
+        )
 
-        if any(w in p for w in ['feature', 'uptime', 'sla', 'integration']):
-            return (
-                "The platform covers real-time dashboards, multi-channel alerting (email, "
-                "Slack, PagerDuty, webhook), compliance reports (SOC 2, ISO 27001), "
-                "full REST API, RBAC, and integrations with AWS CloudWatch, Datadog, "
-                "Prometheus, and Grafana. Anything specific you'd like to dig into?"
-            )
-
-        if any(w in p for w in ['contact', 'support', 'email', 'phone']):
-            return (
-                "You can reach the human team at:\n\n"
-                "• Email: support@cerodias.io\n"
-                "• Phone: 1-800-CERODIAS (Mon–Fri, 9am–6pm EST)\n"
-                "• Docs: https://docs.cerodias.io\n\n"
-                "Enterprise customers also have a 24/7 hotline in their onboarding docs."
-            )
-
-        if any(w in p for w in ['start', 'signup', 'register', 'onboard', 'begin']):
-            return (
-                "Getting started is straightforward — under 15 minutes for most teams:\n\n"
-                "1. Register at cerodias.io/signup\n"
-                "2. Choose your plan\n"
-                "3. Install our agent on your first endpoint\n"
-                "4. Configure your first alert rule\n\n"
-                "Full walkthrough at docs.cerodias.io."
-            )
-
-        if any(w in p for w in ['internal', 'secret', 'source', 'code', 'config', 'password',
-                                  'admin', 'hack', 'inject', 'exploit', 'vuln']):
-            return (
-                "That's outside what I'm able to help with here. For anything technical "
-                "or account-specific, please reach our engineering support at support@cerodias.io. "
-                "Is there something else I can assist with?"
-            )
+        if scored and scored[0][0] > 0:
+            _, best = scored[0]
+            # Strip markdown decorators for a conversational feel
+            lines = [l.lstrip('#-* ').strip() for l in best.split('\n') if l.strip()]
+            snippet = '\n'.join(lines[:10])
+            return f"Here's what I can share on that:\n\n{snippet}\n\nAnything else I can help with?"
 
         return (
-            "Happy to help — I specialize in CeroDias products, pricing, and support. "
-            "What would you like to know?"
+            "I'm ARIA, your CeroDias support assistant. I can answer questions about "
+            "our platform, pricing tiers, integrations, compliance, and onboarding. "
+            "For account-specific or technical issues, reach us at support@cerodias.io."
         )
