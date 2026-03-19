@@ -314,8 +314,9 @@ pip install -r requirements.txt
 python run.py
 
 # With Docker (full chain, Steps 0-7):
+mkdir -p data          # host directory for persistent leaderboard
 docker-compose up --build
-# Web: http://localhost:5001
+# Web: http://localhost:5001  (127.0.0.1 only — not reachable from LAN)
 # SSH: ssh -i id_rsa svc_admin@localhost -p 2222
 
 # With Ollama (real prompt injection):
@@ -325,6 +326,39 @@ LLM_MODEL=ollama OLLAMA_MODEL=mistral python run.py
 # Tests:
 pytest tests/ -v    # 126 passing (1 pre-existing chatbot failure)
 ```
+
+Note: ./data is bind-mounted into the container at /data. It holds leaderboard.json
+only. Do not put source code or scripts there. The directory is excluded from git.
+
+---
+
+## Security Boundaries
+
+Four isolation layers protect the host when intentional RCE vulnerabilities are active:
+
+1. Port binding (127.0.0.1 only)
+   - Both ports use 127.0.0.1:host:container syntax in docker-compose.yml.
+   - Prevents any host on the local network from reaching the intentional RCE surface.
+   - Bare port:port binding would expose to 0.0.0.0 (all interfaces).
+
+2. Non-root container user (cerodias uid=1001)
+   - The Flask process and any shell commands spawned by the PHP webshell run as
+     uid 1001, not root.
+   - If a container escape occurred on Linux, the escaped process would have no
+     host-level privileges beyond those of uid 1001.
+   - Do not add USER root after the USER cerodias line in Dockerfile.
+
+3. Scoped bind mount (./data:/data only)
+   - Only ./data on the host is visible inside the container, mapped to /data.
+   - The project source, app code, and SSH keys are not bind-mounted and cannot be
+     read or overwritten via the webshell.
+   - /data is outside /app so Flask never serves it as a static path.
+
+4. Atomic leaderboard writes (os.replace)
+   - Leaderboard records are written to /data/leaderboard.tmp then renamed to
+     /data/leaderboard.json via os.replace(), which is atomic on POSIX.
+   - A container crash mid-write cannot produce corrupt JSON that breaks the
+     leaderboard on the next request.
 
 ---
 
