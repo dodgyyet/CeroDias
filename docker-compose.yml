@@ -4,11 +4,13 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     volumes:
       - cerodias_keys:/tmp/cerodias
+      - ./data:/data
     environment:
       - LLM_MODEL=mock
+      - ADMIN_TOKEN=cerodias-admin-9f2a4c1b7e3d8a5f
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/robots.txt"]
       interval: 10s
@@ -22,7 +24,7 @@ services:
       context: .
       dockerfile: Dockerfile.ssh
     ports:
-      - "2222:22"
+      - "127.0.0.1:2222:22"
     volumes:
       - cerodias_keys:/tmp/cerodias
     depends_on:
