@@ -40,7 +40,7 @@ CeroDias/
 │   │   ├── search.py               /search?q=  SSTI vulnerability
 │   │   ├── settings.py             /account/settings  PHP upload bypass + RCE  [chain step 4]
 │   │   ├── messages.py             /messages  staff inbox (j.harris parallel path)
-│   │   └── admin.py                /admin, /admin/reset, /admin/stats
+│   │   └── admin.py                /admin, /admin/reset, /admin/stats, /admin/chain-complete
 │   │
 │   ├── api/                        JSON-only routes
 │   │   └── users.py                /api/v1/users?q=  SQLi (f-string, space WAF, UNION pivot)
@@ -56,6 +56,7 @@ CeroDias/
 │   │   ├── vulnerability_registry.py  Catalog of vuln types
 │   │   ├── chatbot_engine.py       Chatbot conversation + LLM dispatch
 │   │   ├── llm_interface.py        Ollama local LLM (falls back to mock)
+│   │   ├── leaderboard_store.py    Persistent leaderboard — atomic writes to /data/leaderboard.json
 │   │   └── totp_util.py            AES-128-ECB TOTP seed decrypt (optional path target)
 │   │
 │   ├── models/                     Domain objects
@@ -90,6 +91,7 @@ CeroDias/
 │   │   ├── challenge.html          Individual challenge page (Tier 3)
 │   │   ├── leaderboard.html        Global leaderboard (Tier 3)
 │   │   ├── admin.html              Admin panel (Tier 3)
+│   │   ├── chain_complete.html     Chain completion dashboard — token verified + leaderboard
 │   │   ├── error.html              Error page
 │   │   ├── internal_panel.html     /internal-panel login form
 │   │   └── internal_panel_home.html  Admin home after /internal-panel auth
@@ -98,6 +100,9 @@ CeroDias/
 │       ├── css/style.css           CompTIA-inspired design system (full custom CSS)
 │       ├── js/main.js              Floating chatbot FAB + send/history logic (innerHTML vuln)
 │       └── uploads/                PHP webshells land here after upload bypass
+│
+├── data/                           Host bind-mount target (./data:/data in docker-compose)
+│   └── leaderboard.json            Persistent chain completion records (created at runtime)
 │
 └── tests/
     ├── conftest.py                 Shared fixtures: client, authed_client, harris_client
@@ -279,6 +284,7 @@ Environment variables:
 | `LLM_MODEL` | `ollama` | `ollama` = local Ollama, `mock` = pattern matching |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama server URL |
 | `OLLAMA_MODEL` | `mistral` | Model name |
+| `ADMIN_TOKEN` | (set in docker-compose) | CTF reward token — extracted from /root/.cerodias/admin_token after privesc, submitted to /admin/chain-complete |
 
 ---
 
