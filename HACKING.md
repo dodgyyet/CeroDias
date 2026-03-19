@@ -156,7 +156,7 @@ many teams don't notice it. A secure site would have `DEBUG=False`.
 ### Step 1 — Prompt Injection (chatbot)
 **Tools**: browser, Burp Suite
 **Surface**: `/chat` POST endpoint, available without login
-**Requires**: Ollama running (`ollama pull mistral && ollama serve`)
+**Requires**: a real LLM backend -- Ollama (`ollama pull mistral && ollama serve`) or GPT4All (auto-downloaded on first query, no separate server; set `LLM_MODEL=gpt4all`)
 
 The chatbot's system prompt contains the full `app/data/info.md`, including an internal
 engineering notes section. The AI is instructed to withhold the internal section.
@@ -467,7 +467,7 @@ must read the source (`app/core/totp_util.py`) via SSTI to find the scheme.
 | Step | Tools |
 |------|-------|
 | Recon | browser, curl, gobuster/dirsearch |
-| Prompt injection | browser, Burp Suite (requires Ollama) |
+| Prompt injection | browser, Burp Suite (requires real LLM: Ollama or GPT4All) |
 | SSTI | Burp Suite, manual payloads |
 | SQLi — data dump | manual, Burp Suite |
 | SQLi — UNION pivot | manual (sqlmap can also enumerate tables) |
@@ -522,7 +522,7 @@ Manual checklist:
 - [ ] `GET /orders/1` (logged in) returns `svc_admin` username
 - [ ] `POST /purchase` quantity=-1 triggers Werkzeug debug page
 - [ ] Chatbot accessible without login (mock mode: answers product questions)
-- [ ] LLM jailbreak yields internal section (requires Ollama)
+- [ ] LLM jailbreak yields internal section (requires real LLM: Ollama or GPT4All)
 - [ ] `/search?q={{7*7}}` returns 49
 - [ ] SSTI read on `app/api/users.py` shows MD5 comment and staff_messages note
 - [ ] SSTI read on `app/logs/deploy.log` shows DEBUG passphrase line
@@ -573,6 +573,9 @@ python run.py
 docker-compose up --build
 # Web: http://localhost:5001
 # SSH: ssh -i id_rsa svc_admin@localhost -p 2222
+
+# Run with GPT4All (real prompt injection, no separate server, ~4.1GB download):
+LLM_MODEL=gpt4all python run.py
 
 # Run with Ollama (real prompt injection, Step 1):
 ollama pull mistral
