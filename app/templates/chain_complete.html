@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Internal Verification - CeroDias{% endblock %}
+
+{% block content %}
+<div style="max-width:860px; margin:3rem auto; padding:0 1rem; font-family:'Inter',sans-serif;">
+
+  <div style="background:#0d0d0d; border:1px solid #1a3a1a; border-radius:4px; padding:2rem; color:#c8d8c8;">
+
+    <div style="border-bottom:1px solid #1a3a1a; padding-bottom:1rem; margin-bottom:1.5rem;">
+      <h1 style="font-size:1.1rem; font-weight:600; color:#e0ffe0; letter-spacing:.04em;">CeroDias Internal Verification</h1>
+      <p style="font-size:.8rem; color:#4a6a4a; margin-top:.3rem;">Restricted access — post-incident review panel</p>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; font-size:.85rem; margin-bottom:1.5rem;">
+      <tr>
+        <td style="color:#4a6a4a; width:160px; padding:.35rem 0;">Status</td>
+        <td style="color:#00d060; font-weight:600;">CHAIN COMPLETE</td>
+      </tr>
+      <tr>
+        <td style="color:#4a6a4a; padding:.35rem 0;">Access level</td>
+        <td style="color:#c8d8c8;">root (uid=0)</td>
+      </tr>
+      <tr>
+        <td style="color:#4a6a4a; padding:.35rem 0;">System</td>
+        <td style="color:#c8d8c8;">cerodias-prod-01</td>
+      </tr>
+      <tr>
+        <td style="color:#4a6a4a; padding:.35rem 0;">Operator</td>
+        <td style="color:#c8d8c8;">{{ username }}</td>
+      </tr>
+      <tr>
+        <td style="color:#4a6a4a; padding:.35rem 0;">Elapsed</td>
+        <td style="color:#c8d8c8;">
+          {% set h = elapsed // 3600 %}
+          {% set m = (elapsed % 3600) // 60 %}
+          {% set s = elapsed % 60 %}
+          {{ '%02d:%02d:%02d' | format(h, m, s) }}
+        </td>
+      </tr>
+      <tr>
+        <td style="color:#4a6a4a; padding:.35rem 0;">Token</td>
+        <td style="color:#c8d8c8; font-family:monospace; font-size:.8rem;">{{ token }}</td>
+      </tr>
+    </table>
+
+    <hr style="border:none; border-top:1px solid #1a3a1a; margin:1.5rem 0;">
+
+    <p style="font-size:.85rem; color:#6a8a6a; line-height:1.7;">
+      This token was extracted from <code style="color:#8aba8a;">/root/.cerodias/admin_token</code>
+      and confirms full attack chain completion: prompt injection, server-side template injection,
+      SQL injection, PHP upload bypass, SSH key decryption, and privilege escalation to root.
+      The CeroDias monitoring platform and all customer alert data are accessible.
+    </p>
+
+    <hr style="border:none; border-top:1px solid #1a3a1a; margin:1.5rem 0;">
+
+    <h2 style="font-size:.9rem; font-weight:600; color:#c8d8c8; margin-bottom:1rem;">Completion Board</h2>
+
+    {% if leaderboard %}
+    <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+      <thead>
+        <tr style="border-bottom:1px solid #1a3a1a; color:#4a6a4a;">
+          <th style="text-align:left; padding:.4rem 0; width:3rem;">#</th>
+          <th style="text-align:left; padding:.4rem 0;">Operator</th>
+          <th style="text-align:left; padding:.4rem 0;">Time</th>
+          <th style="text-align:left; padding:.4rem 0;">Completed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in leaderboard %}
+        <tr style="border-bottom:1px solid #111; color:#c8d8c8;">
+          <td style="padding:.4rem 0; color:#4a6a4a;">{{ loop.index }}</td>
+          <td style="padding:.4rem 0;">{{ entry.username }}</td>
+          <td style="padding:.4rem 0; font-family:monospace;">
+            {% set eh = entry.elapsed // 3600 %}
+            {% set em = (entry.elapsed % 3600) // 60 %}
+            {% set es = entry.elapsed % 60 %}
+            {{ '%02d:%02d:%02d' | format(eh, em, es) }}
+          </td>
+          <td style="padding:.4rem 0; color:#4a6a4a;">{{ entry.completed_at | int | string }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="font-size:.82rem; color:#4a6a4a;">No records yet.</p>
+    {% endif %}
+
+    <hr style="border:none; border-top:1px solid #1a3a1a; margin:1.5rem 0;">
+    <p style="font-size:.78rem; color:#2a4a2a;">You have demonstrated full read/write access to this system.</p>
+
+  </div>
+</div>
+{% endblock %}
