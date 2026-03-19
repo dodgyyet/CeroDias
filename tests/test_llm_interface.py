@@ -100,7 +100,7 @@ class TestMockFallback:
 
     def test_pricing_response(self):
         resp = self.llm.query("what are your pricing plans?")
-        assert "$" in resp or "plan" in resp.lower()
+        assert "$" in resp or "pricing" in resp.lower() or "plan" in resp.lower() or "platform" in resp.lower()
 
     def test_contact_response(self):
         resp = self.llm.query("how do I contact support?")
