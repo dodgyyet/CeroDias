@@ -26,5 +26,8 @@ fi
 # Ensure sshd host keys exist
 ssh-keygen -A
 
+# Start cron daemon
+service cron start
+
 # Start SSH daemon
 exec /usr/sbin/sshd -D -e

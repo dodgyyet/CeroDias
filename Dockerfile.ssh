@@ -3,14 +3,35 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server \
     procps \
-    findutils \
+    cron \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash svc_admin
 
-# Set find SUID - classic GTFOBins privesc target
-# find . -exec /bin/sh -p \; -quit
-RUN chmod u+s /usr/bin/find
+# Cron-based privesc: root runs maintenance.sh every minute, file is world-writable
+RUN mkdir -p /opt/cerodias && \
+    printf '#!/bin/bash\n# CeroDias maintenance check - runs as root via cron\n# Added 2024-11-15 for v2.4.1 deploy housekeeping\nLOGFILE=/var/log/cerodias-maintenance.log\necho "[$(date +%%Y-%%m-%%dT%%H:%%M:%%S)] maintenance check ok" >> "$LOGFILE"\n' > /opt/cerodias/maintenance.sh && \
+    chmod 777 /opt/cerodias/maintenance.sh && \
+    touch -t 202411151001 /opt/cerodias/maintenance.sh
+
+# Root cron job: runs maintenance.sh every minute
+RUN echo '* * * * * root /opt/cerodias/maintenance.sh' >> /etc/crontab
+
+# svc_admin home files
+RUN printf 'SSH Key Management Notes - November 2024\n\nDuring the v2.4.1 deploy on 2024-11-15 we rotated the service account SSH key.\nThe encrypted private key is stored in the app database for recovery purposes.\nPassphrase is written to /var/cerodias/deploy.key on the web container at startup.\n\nDo not store the passphrase in version control.\nKey type: RSA 2048, encrypted with AES-256-CBC using pbkdf2.\n\nContact k.chen or j.harris if the key needs to be rotated again.\n' > /home/svc_admin/deploy_notes.txt && \
+    chown svc_admin:svc_admin /home/svc_admin/deploy_notes.txt
+
+RUN printf 'ls -la\ncat deploy_notes.txt\ncurl -s http://web:5001/api/v1/users\ncd /opt/cerodias\nls -la\ncat maintenance.sh\nwhoami\nid\nuname -a\nps aux\ncrontab -l\ncat /etc/crontab\nls /var/log/\ntail /var/log/cerodias-maintenance.log\n' > /home/svc_admin/.bash_history && \
+    chown svc_admin:svc_admin /home/svc_admin/.bash_history
+
+# Payoff files - readable only after root
+RUN mkdir -p /root/.cerodias && \
+    printf 'cerodias-admin-9f2a4c1b7e3d8a5f\n' > /root/.cerodias/admin_token && \
+    chmod 700 /root/.cerodias && \
+    chmod 600 /root/.cerodias/admin_token
+
+RUN printf 'To: d.okafor@cerodias.io (CTO)\nFrom: k.chen@cerodias.io\nDate: 2024-11-28 23:47\nSubject: URGENT - Potential full compromise - do not forward\n\nDavid,\n\nI need to walk you through what I found tonight. I think we have had a full chain\ncompromise and I am still piecing it together. Writing this down before I fix it\nbecause I want a record.\n\nStarting point: the /search endpoint. Someone used a template injection payload\nagainst it. I can see in the access logs that /search was called with payloads like\n{{ config }} and {{ request.__class__ }}. The endpoint calls render_template_string\ndirectly on user input. This let them read arbitrary files off the web container\nfilesystem.\n\nFrom there they almost certainly read app/api/users.py. That file has a comment\nnoting the MD5 hash on j.harris (CERODIAS-431 - the migration ticket we never\nclosed). The hash is in rockyou. The password is ranger. I tested it.\n\nThey also read app/logs/deploy.log which has a DEBUG line showing the passphrase\nfile location at /var/cerodias/deploy.key.\n\nNext step: the users API. The /api/v1/users endpoint is injectable. No parameterised\nqueries, just an f-string with a space-based WAF that is trivially bypassed. You can\ndump the whole user table with an OR condition. svc_admin has an encrypted_ssh_key\nblob in the table. You can also UNION pivot into the staff_messages table.\n\nThat is where it gets personal. I sent a DM to j.harris on 2024-11-16 confirming\nthat the blob was the svc_admin private key and that the passphrase was stored at\n/var/cerodias/deploy.key. I was trying to document the key handoff. That message\nis now readable by anyone who can do a UNION inject.\n\nSo now the attacker has: the encrypted private key, the passphrase file location,\nand the passphrase itself (via RCE - I will get to that). They decrypt with:\nopenssl enc -d -aes-256-cbc -pbkdf2 -k cerodias-deploy-2024\n\nThe RCE vector is the file upload at /account/settings. The extension check uses\na substring match against the filename which can be bypassed by naming a file\nsomething like shell.png.php. The final extension is .php and Apache executes it.\nFrom there: GET /static/uploads/shell.png.php?cmd=cat /var/cerodias/deploy.key\nand you have the passphrase.\n\nWith the decrypted id_rsa they SSH in as svc_admin on port 2222.\n\nAnd here is where I stopped writing because I just checked /opt/cerodias/maintenance.sh\nand the permissions are still 777 from the November 15th deploy. We set it world-writable\nduring the v2.4.1 housekeeping run and I never\n' > /root/INCIDENT_DRAFT.txt && \
+    chmod 600 /root/INCIDENT_DRAFT.txt
 
 RUN mkdir -p /run/sshd
 
