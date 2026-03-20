@@ -368,7 +368,7 @@ cat /root/.cerodias/admin_token
 Submit the token to the web app:
 
 ```
-http://localhost:5001/admin/chain-complete?token=cerodias-admin-9f2a4c1b7e3d8a5f
+http://localhost:5001/chain-complete?token=cerodias-admin-9f2a4c1b7e3d8a5f
 ```
 
 This unlocks the chain completion dashboard with your attack timeline and the leaderboard.

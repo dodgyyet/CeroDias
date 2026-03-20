@@ -11,7 +11,7 @@ The three-tier access model mirrors real-world privilege escalation:
 ```
 Tier 1 — Public           / , /register, /robots.txt, /.git/*, /search, /checkout
 Tier 2 — Registered user  /account, /orders/<id>, /purchase, /chat, /account/settings
-Tier 3 — Admin            /dashboard, /leaderboard, /admin  (via /internal-panel)
+Tier 3 — Admin            /dashboard, /leaderboard  (via /internal-panel)
 ```
 
 Tier 3 is only reachable after completing the full exploit chain.
@@ -40,7 +40,7 @@ CeroDias/
 │   │   ├── search.py               /search?q=  SSTI vulnerability
 │   │   ├── settings.py             /account/settings  PHP upload bypass + RCE  [chain step 4]
 │   │   ├── messages.py             /messages  staff inbox (j.harris + session-forgery parallel path)
-│   │   └── admin.py                /admin, /admin/reset, /admin/stats, /admin/chain-complete
+│   │   └── admin.py                /chain-complete  (token verification + leaderboard)
 │   │
 │   ├── api/                        JSON-only routes
 │   │   └── users.py                /api/v1/users?q=  SQLi (f-string, space WAF, UNION pivot)
@@ -92,7 +92,6 @@ CeroDias/
 │   │   ├── dashboard.html          CTF challenge dashboard (Tier 3 only)
 │   │   ├── challenge.html          Individual challenge page (Tier 3)
 │   │   ├── leaderboard.html        Global leaderboard (Tier 3)
-│   │   ├── admin.html              Admin panel (Tier 3)
 │   │   ├── chain_complete.html     Chain completion dashboard — token verified + leaderboard
 │   │   ├── error.html              Error page
 │   │   ├── internal_panel.html     /internal-panel login form
@@ -129,7 +128,7 @@ CeroDias/
 ### Tier 1 — Public (no session required)
 Any visitor. Routes: `/`, `/register`, `/robots.txt`, `/.git/*`, `/search`.
 
-`robots.txt` disallows: `/internal-panel`, `/api/v1/`, `/admin`, `/orders/`, `/.git`
+`robots.txt` disallows: `/internal-panel`, `/api/v1/`, `/orders/`, `/.git`, `/messages`, `/account/settings`, `/static/uploads/`
 (Standard recon target — tells players exactly where the interesting surfaces are.)
 
 `/.git/*` serves fake but realistic git files:
@@ -159,8 +158,8 @@ the interactive debugger page, leaking: full traceback, local variables (includi
 `all_orders` dict and `session` contents), internal file paths, and framework versions.
 
 ### Tier 3 — Admin (`session['internal_admin']` set)
-Only reachable after completing the full exploit chain and POSTing valid credentials
-to `/internal-panel`. Routes: `/dashboard`, `/leaderboard`, `/admin`.
+Only reachable after the optional hard path: valid credentials + TOTP to `/internal-panel`.
+Routes: `/dashboard`, `/leaderboard`.
 
 Note: forging `internal_admin=True` in a session cookie does NOT bypass `/internal-panel` —
 the route validates bcrypt/12 + TOTP on the server regardless of session state.

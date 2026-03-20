@@ -53,7 +53,6 @@ Step 7  Privesc     cron writable script → root                [Docker]
 GET /robots.txt
 → Disallow: /internal-panel      ← crown jewel login
 → Disallow: /api/v1/             ← SQLi endpoint
-→ Disallow: /admin               ← dead end
 → Disallow: /orders/             ← IDOR surface
 → Disallow: /.git                ← git exposure (see below)
 → Disallow: /messages            ← staff inbox (403 unless staff session)
@@ -61,7 +60,7 @@ GET /robots.txt
 → Disallow: /static/uploads/     ← webshell landing directory
 ```
 
-Eight paths. `/admin` is a dead end. All others matter.
+Seven paths. All matter.
 
 #### 0b — .git/ directory exposure
 
@@ -420,7 +419,7 @@ cat /root/.cerodias/admin_token
 A token (realistic hex string, not FLAG{} format). Take this back to the web app:
 
 ```
-GET /admin/chain-complete?token=<admin_token>
+GET /chain-complete?token=<admin_token>
 ```
 
 This unlocks the chain completion dashboard: the player's full attack timeline with
@@ -523,7 +522,7 @@ Manual checklist:
 - [ ] `echo 'chmod u+s /bin/bash' >> /opt/cerodias/maintenance.sh` then `/bin/bash -p` gives root (Docker)
 - [ ] `cat /root/INCIDENT_DRAFT.txt` shows k.chen unsent draft naming every chain step (Docker)
 - [ ] `cat /root/.cerodias/admin_token` returns `cerodias-admin-9f2a4c1b7e3d8a5f` (Docker)
-- [ ] `GET /admin/chain-complete?token=cerodias-admin-9f2a4c1b7e3d8a5f` renders chain completion page
+- [ ] `GET /chain-complete?token=cerodias-admin-9f2a4c1b7e3d8a5f` renders chain completion page
 
 ---
 
@@ -535,7 +534,7 @@ Manual checklist:
 | Session cookie forge for `role=staff` | This IS a valid parallel path to `/messages` — see Step 3 Path B |
 | Rockyou against bcrypt hash | Password not in rockyou — needs policy-derived wordlist |
 | Raw encrypted TOTP seed | AES encrypted — needs SECRET_KEY + username to decrypt |
-| `/admin` panel | Separate from the chain — resets the game, not the crown jewel |
+| `/chain-complete` without valid token | Returns 404 — token must be read from /root/.cerodias/admin_token |
 | `/orders/<id>` IDOR alone | Gives you a username. Still need credentials + TOTP. |
 | Werkzeug debug page | Leaks recon data (username, paths). Does not give credentials. |
 | `/.git/` files | Hints at endpoints. Does not contain credentials or SECRET_KEY. |
@@ -560,7 +559,7 @@ See README.md for setup. See ARCHITECTURE.md for file structure.
 | 5 - Decrypt | done | base64 + openssl locally |
 | 6 - SSH | done | docker-compose up; ssh -i id_rsa svc_admin@localhost -p 2222 |
 | 7 - Cron privesc | done | append to /opt/cerodias/maintenance.sh (777) then /bin/bash -p |
-| 7b - Chain payoff | done | /root/INCIDENT_DRAFT.txt, /root/.cerodias/admin_token, /admin/chain-complete |
+| 7b - Chain payoff | done | /root/INCIDENT_DRAFT.txt, /root/.cerodias/admin_token, /chain-complete |
 
 ### Test Coverage
 

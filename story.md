@@ -346,7 +346,7 @@ Do NOT put this in Jira. Do not forward it. I don't know who has access to what.
 
 After reading this, the attacker finds `/root/.cerodias/admin_token` — a token that
 unlocks the chain completion endpoint on the web application. Visiting
-`/admin/chain-complete` with this token shows the player's full attack timeline,
+`/chain-complete` with this token shows the player's full attack timeline,
 attempt counts per step, and a leaderboard of everyone who has completed the chain
 and how long it took them. The company's own infrastructure confirms the breach.
 
