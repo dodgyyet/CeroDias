@@ -1,32 +1,68 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
 {% block title %}Account Settings — CeroDias{% endblock %}
+
 {% block content %}
-<div class="container mt-4" style="max-width:600px;">
-  <h4>Account Settings</h4>
-  <div class="card mt-3">
-    <div class="card-body">
-      <h6 class="card-title">Profile Picture</h6>
-      <p class="text-muted small">Accepted formats: PNG, JPEG, GIF, WebP. Max 2 MB.</p>
-
-      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
-      {% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
-      {% if avatar_url %}
-        <img src="{{ avatar_url }}" alt="Profile" class="mb-3 rounded"
-             style="max-width:120px; max-height:120px;">
-      {% endif %}
-
-      <!-- profile image upload — processed server-side by image handler -->
-      <!-- assets served from /static/uploads/ -->
-      <form method="POST" action="/account/settings/avatar"
-            enctype="multipart/form-data"
-            data-handler="php-image-processor">
-        <div class="mb-3">
-          <input type="file" class="form-control" name="avatar"
-                 accept="image/*" required>
+<div class="page-container">
+    <div class="page-header">
+        <div style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.4rem;">
+            <a href="/account">My Account</a> &rsaquo; Settings
         </div>
-        <button type="submit" class="btn btn-primary btn-sm">Upload</button>
-      </form>
+        <h2>Account Settings</h2>
     </div>
-  </div>
+
+    <!-- Profile Picture -->
+    <div class="card" style="margin-bottom: 1.5rem; max-width: 600px;">
+        <div class="card-header">&#128247; Profile Picture</div>
+        <div class="card-body">
+            <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem;">Accepted formats: PNG, JPEG, GIF, WebP. Max 2 MB.</p>
+
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            {% if success %}
+                <div class="alert alert-success">{{ success }}</div>
+            {% endif %}
+
+            {% if avatar_url %}
+                <img src="{{ avatar_url }}" alt="Profile" style="max-width: 120px; max-height: 120px; border-radius: var(--radius-card); margin-bottom: 1rem; display: block;">
+            {% endif %}
+
+            <!-- profile image upload — processed server-side by image handler -->
+            <!-- assets served from /static/uploads/ -->
+            <form method="POST" action="/account/settings/avatar"
+                  enctype="multipart/form-data"
+                  data-handler="php-image-processor">
+                <div class="form-group">
+                    <input type="file" class="form-control" name="avatar"
+                           accept="image/*" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Upload Photo</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Account Information -->
+    <div class="card" style="margin-bottom: 1.5rem; max-width: 600px;">
+        <div class="card-header">&#128100; Account Information</div>
+        <div class="card-body">
+            <div class="challenge-meta-row" style="border-bottom: 1px solid var(--border);">
+                <span class="meta-key">Username</span>
+                <span class="meta-val">{{ session.get('username') }}</span>
+            </div>
+            <div class="challenge-meta-row">
+                <span class="meta-key">Member type</span>
+                <span class="meta-val">
+                    {% if session.get('role') == 'staff' %}
+                        <span class="badge badge-navy">Lifetime Member</span>
+                    {% else %}
+                        <span class="badge badge-navy">Standard Member</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <a href="/account" style="font-size: 0.88rem; color: var(--navy);">&larr; Back to Account</a>
 </div>
 {% endblock %}
