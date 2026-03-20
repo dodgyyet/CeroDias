@@ -44,7 +44,7 @@ def account():
             "customer_username": username,
             "cert": "CeroDias A-",
             "quantity": 1,
-            "total": 219,
+            "total": 129,
             "voucher_code": code,
             "date": "2026-03-11",
             "status": "issued",

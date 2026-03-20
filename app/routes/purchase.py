@@ -28,12 +28,21 @@ from app.storage.memory_store import MemoryStore
 bp = Blueprint('purchase', __name__)
 
 CERT_PRICES = {
-    "a-":        219,
-    "network-":  349,
-    "security-": 392,
-    "linux-":    338,
-    "pentest-":  466,
-    "cloud-":    359,
+    "a-":        129,
+    "network-":  179,
+    "security-": 199,
+    "linux-":    159,
+    "pentest-":  249,
+    "cloud-":    189,
+}
+
+CERT_NAMES = {
+    "a-":        "CeroDias A-",
+    "network-":  "CeroDias Network-",
+    "security-": "CeroDias Security-",
+    "linux-":    "CeroDias Linux-",
+    "pentest-":  "CeroDias PenTest-",
+    "cloud-":    "CeroDias Cloud-",
 }
 
 
@@ -93,3 +102,40 @@ def purchase():
     }
     store.add_order(new_order)
     return redirect(url_for('account.account'))
+
+
+@bp.route('/checkout', methods=['GET', 'POST'])
+@require_login
+def checkout():
+    cert_id = request.args.get('cert_id', 'a-').strip().lower()
+    if cert_id not in CERT_PRICES:
+        cert_id = 'a-'
+    cert_name = CERT_NAMES.get(cert_id, 'CeroDias A-')
+    price = CERT_PRICES.get(cert_id, 129)
+
+    if request.method == 'POST':
+        cert_id = request.form.get('cert_id', cert_id).strip().lower()
+        if cert_id not in CERT_PRICES:
+            cert_id = 'a-'
+        cert_name = CERT_NAMES.get(cert_id, 'CeroDias A-')
+        price = CERT_PRICES.get(cert_id, 129)
+        quantity = int(request.form.get('quantity', '1') or '1')
+        return render_template(
+            'checkout.html',
+            cert_id=cert_id,
+            cert_name=cert_name,
+            price=price,
+            quantity=quantity,
+            declined=True,
+            error="Your card was declined. Please check your details and try again.",
+        )
+
+    return render_template(
+        'checkout.html',
+        cert_id=cert_id,
+        cert_name=cert_name,
+        price=price,
+        quantity=1,
+        declined=False,
+        error=None,
+    )

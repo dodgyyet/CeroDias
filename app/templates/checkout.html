@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout — CeroDias{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.4rem;">
+            <a href="/account">My Account</a> &rsaquo; Checkout
+        </div>
+        <h2>Complete Your Purchase</h2>
+    </div>
+
+    {% if declined %}
+    <div class="payment-declined-banner">
+        Payment declined. Your card could not be processed. Please check your details or try a different card.
+    </div>
+    {% endif %}
+
+    <div class="checkout-layout">
+        <!-- Payment form -->
+        <div class="card">
+            <div class="card-header">&#128179; Payment Details</div>
+            <div class="card-body">
+                <form method="POST" action="/checkout?cert_id={{ cert_id }}">
+                    <input type="hidden" name="cert_id" value="{{ cert_id }}">
+                    <input type="hidden" name="quantity" value="{{ quantity }}">
+
+                    <div class="form-group">
+                        <label class="form-label">Cardholder Name</label>
+                        <input type="text" class="form-control" name="cardholder_name" placeholder="Full name as it appears on your card" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Card Number</label>
+                        <input type="text" class="form-control" name="card_number" placeholder="1234 5678 9012 3456" maxlength="19" required>
+                    </div>
+
+                    <div class="card-row">
+                        <div class="form-group">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="text" class="form-control" name="expiry" placeholder="MM/YY" maxlength="5" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">CVV</label>
+                            <input type="text" class="form-control" name="cvv" placeholder="123" maxlength="3" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 0.5rem;">Complete Purchase</button>
+                </form>
+
+                <div class="security-note">
+                    <strong>Your payment details are encrypted and never stored.</strong> CeroDias does not share your billing information with third parties.
+                </div>
+            </div>
+        </div>
+
+        <!-- Order summary -->
+        <div class="checkout-summary">
+            <div class="checkout-summary-title">Order Summary</div>
+
+            <div class="checkout-line">
+                <span>{{ cert_name }}</span>
+                <span>${{ price }}</span>
+            </div>
+            <div class="checkout-line">
+                <span>Quantity</span>
+                <span>{{ quantity }}</span>
+            </div>
+            <div class="checkout-line checkout-line-total">
+                <span>Total</span>
+                <span>${{ price * quantity }}</span>
+            </div>
+
+            <div class="checkout-note">
+                Certification is valid for life. Free renewal forever. One free retake included.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

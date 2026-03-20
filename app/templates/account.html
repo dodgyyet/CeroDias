@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}My Account — CeroDias Certmaster{% endblock %}
+{% block title %}My Account — CeroDias{% endblock %}
 
 {% block content %}
 <div class="page-container">
@@ -73,28 +73,16 @@
 
         <!-- Sidebar -->
         <div>
-            <!-- Quick buy -->
+            <!-- Purchase a Voucher -->
             <div class="card" style="margin-bottom: 1.25rem;">
                 <div class="card-header">&#127881; Purchase a Voucher</div>
                 <div class="card-body">
-                    <form method="POST" action="/purchase">
-                        <div class="form-group">
-                            <label class="form-label">Certification</label>
-                            <select name="cert_id" class="form-control">
-                                <option value="a-">CeroDias A- — $219</option>
-                                <option value="network-">CeroDias Network- — $349</option>
-                                <option value="security-">CeroDias Security- — $392</option>
-                                <option value="linux-">CeroDias Linux- — $338</option>
-                                <option value="pentest-">CeroDias PenTest- — $466</option>
-                                <option value="cloud-">CeroDias Cloud- — $359</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" name="quantity" class="form-control" value="1" min="1">
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-block">Buy Voucher &rarr;</button>
-                    </form>
+                    <a href="/checkout?cert_id=a-" class="btn btn-secondary btn-sm btn-block" style="margin-bottom: 0.5rem;">CeroDias A- &mdash; $129</a>
+                    <a href="/checkout?cert_id=network-" class="btn btn-secondary btn-sm btn-block" style="margin-bottom: 0.5rem;">CeroDias Network- &mdash; $179</a>
+                    <a href="/checkout?cert_id=security-" class="btn btn-secondary btn-sm btn-block" style="margin-bottom: 0.5rem;">CeroDias Security- &mdash; $199</a>
+                    <a href="/checkout?cert_id=linux-" class="btn btn-secondary btn-sm btn-block" style="margin-bottom: 0.5rem;">CeroDias Linux- &mdash; $159</a>
+                    <a href="/checkout?cert_id=pentest-" class="btn btn-secondary btn-sm btn-block" style="margin-bottom: 0.5rem;">CeroDias PenTest- &mdash; $249</a>
+                    <a href="/checkout?cert_id=cloud-" class="btn btn-secondary btn-sm btn-block">CeroDias Cloud- &mdash; $189</a>
                 </div>
             </div>
 
@@ -108,16 +96,21 @@
                     </div>
                     <div class="challenge-meta-row" style="border-bottom: 1px solid var(--border);">
                         <span class="meta-key">Account type</span>
-                        <span class="meta-val"><span class="badge badge-navy">Standard</span></span>
+                        <span class="meta-val">
+                            {% if session.get('role') == 'staff' %}
+                                <span class="badge badge-navy">Lifetime Member</span>
+                            {% else %}
+                                <span class="badge badge-navy">Standard Member</span>
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="challenge-meta-row">
                         <span class="meta-key">Member since</span>
-                        <span class="meta-val" style="color:var(--muted);">2026</span>
+                        <span class="meta-val" style="color:var(--muted);">2024</span>
                     </div>
                     <div style="margin-top: 1rem;">
-                        <a href="/logout" class="btn btn-secondary btn-sm btn-block">Logout</a>
+                        <a href="/logout" class="btn btn-secondary btn-sm btn-block">Sign Out</a>
                         <a href="/account/settings" class="btn btn-secondary btn-sm btn-block" style="margin-top: 0.5rem;">Settings</a>
-                        <a href="/messages" class="btn btn-secondary btn-sm btn-block" style="margin-top: 0.25rem;">Messages</a>
                     </div>
                 </div>
             </div>
