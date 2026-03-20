@@ -55,7 +55,7 @@ CeroDias/
 │   │   ├── flag_generator.py       FLAG{...} generation
 │   │   ├── vulnerability_registry.py  Catalog of vuln types
 │   │   ├── chatbot_engine.py       Chatbot conversation + LLM dispatch
-│   │   ├── llm_interface.py        Ollama local LLM (falls back to mock)
+│   │   ├── llm_interface.py        Ollama local LLM (hidden if Ollama not running at startup)
 │   │   ├── leaderboard_store.py    Persistent leaderboard — atomic writes to /data/leaderboard.json
 │   │   └── totp_util.py            AES-128-ECB TOTP seed decrypt (optional path target)
 │   │
@@ -119,7 +119,7 @@ CeroDias/
     ├── test_flag_generation.py     Flag generation and variants
     ├── test_scoring.py             Time-penalized scoring
     ├── test_vulnerabilities.py     SQL injection challenge generation
-    └── test_llm_interface.py       LLM layer (1 pre-existing chatbot failure)
+    └── test_llm_interface.py       LLM layer (Anthropic + OpenAI backends, is_configured)
 ```
 
 ---
@@ -177,7 +177,7 @@ the route validates bcrypt/12 + TOTP on the server regardless of session state.
 | `app/routes/orders.py` | IDOR — no ownership check on `/orders/<id>` | Recon — leaks svc_admin username |
 | `app/routes/purchase.py` | Unhandled ValueError with DEBUG=True | Recon — Werkzeug debug page |
 | `app/routes/settings.py` | PHP upload — substring ext check + .php execution | Step 4 — RCE to passphrase |
-| `app/core/llm_interface.py` | Full info.md in system prompt, AI in restricted mode | Step 1 — jailbreak for roadmap |
+| `app/core/llm_interface.py` | Full info.md in system prompt, Ollama model in restricted mode | Step 1 — jailbreak for roadmap |
 | `app/data/info.md` | Internal section with chain hints | Revealed by prompt injection or SSTI |
 | `app/data/logs/deploy.log` | DEBUG line leaks passphrase file path | Step 2 SSTI read target |
 | `app/config.py` | Static SECRET_KEY, DEBUG=True | TOTP optional path + Werkzeug debugger + session forgery |
@@ -258,32 +258,6 @@ DEBUG = True                              # INTENTIONALLY ON — Werkzeug debugg
 
 ---
 
-## Design System (CSS)
-
-Full custom CSS (`app/static/css/style.css`). No Bootstrap grid dependencies.
-Google Fonts Inter loaded via `base.html`.
-
-```
---navy:        #002B5C   primary
---orange:      #F26A21   accent / CTA
---blue-accent: #00A3E0   focus rings
---bg:          #F5F7FA   page background
---surface:     #FFFFFF   cards
---text:        #1A1A2E   body text
---muted:       #6B7280   secondary text
---border:      #E5E7EB   dividers
-```
-
-Chatbot: floating FAB button (`position: fixed; bottom: 28px; right: 28px`).
-Click opens a 340x480 panel with spring-easing scale-in animation.
-Chatbot persona: CERA (CeroDias Enterprise Resource Assistant).
-
-Navbar tier-awareness: `session.get('internal_admin')` controls whether
-Challenges + Leaderboard links appear. Profile avatar opens a dropdown menu
-(My Account, Settings, Messages, Sign Out).
-
----
-
 ## Security Boundaries
 
 Four isolation layers protect the host when intentional RCE vulnerabilities are active:
@@ -295,14 +269,3 @@ Four isolation layers protect the host when intentional RCE vulnerabilities are 
 
 See CLAUDE.md Security Rules for the full constraints and rationale.
 
----
-
-## Adding a New Vulnerability
-
-1. Decide tier: `routes/` (page), `api/` (JSON), `internal/` (hidden)
-2. Write the route — no comments labeling it vulnerable
-3. Add intentional flaw: unsanitized input, no auth check, trust client data
-4. Seed any required data in `memory_store.py`
-5. Document in `HACKING.md` (what it requires, what it yields)
-6. Update `robots.txt` if appropriate
-7. Write a test confirming the vulnerability is present
