@@ -2,10 +2,16 @@
 
 ## Background
 
-CeroDias Enterprise Solutions runs a Flask-based customer portal for IT certification
-vouchers. The engineering team is small: developers who know each other, move fast,
-and trust each other's judgment. There is no dedicated security team. Audits happen
-when someone schedules them.
+CeroDias sells vendor-neutral IT certification vouchers, founded by John Ratter after
+he left a competing company over credential expiry practices he disagreed with.
+The engineering team is small: developers who know each other, move fast, and trust
+each other's judgment. There is no dedicated security team. Audits happen when someone
+schedules them.
+
+The team recently added a customer-facing AI chatbot, CERA, as part of a push to stay
+current with what everyone else was doing. It shipped on a short timeline. The system
+prompt was wired up to the internal knowledge base because it was fast and it worked,
+and nobody had scheduled the time to revisit it.
 
 This is not a story about obvious negligence. Each of the four issues described below
 is the kind of thing that can sit in a codebase or a database for months without
@@ -106,10 +112,10 @@ session cookies are cryptographically signed: they cannot be tampered with witho
 knowing the key. With the key, they can be forged to claim any session state —
 including a staff role.
 
-k.chen flagged this in a staff message to Marcus Diaz in October 2024. The response
-was that the renewal system launch was two weeks out and there was no budget to pull
-someone off it. The SECRET_KEY rotation was added to the Q1 backlog. The renewal
-system launched. Q1 planning happened. The backlog item was not prioritised.
+k.chen flagged this in a staff message to John in October 2024. The response was that
+the voucher platform launch was two weeks out and there was no budget to pull someone
+off it. The SECRET_KEY rotation was added to the Q1 backlog. The launch happened.
+Q1 planning happened. The backlog item was not prioritised.
 
 An attacker who reads `app/config.py` via the SSTI vulnerability has the key. With
 `flask-unsign` and the key, they can generate a valid session cookie claiming

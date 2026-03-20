@@ -64,8 +64,8 @@
         {% block content %}{% endblock %}
     </div>
 
-    <!-- ── Floating Chatbot (only when logged in) ── -->
-    {% if session.get('username') %}
+    <!-- ── Floating Chatbot (only when logged in and CERA is configured) ── -->
+    {% if session.get('username') and cera_enabled %}
     <div id="chat-fab" class="chat-fab" title="Chat with CERA">
         <span id="chat-fab-icon">&#128172;</span>
     </div>
@@ -92,7 +92,7 @@
         <div class="footer-grid">
             <div>
                 <div class="footer-brand-name">CeroDias<span class="brand-dot">.</span></div>
-                <p class="footer-tagline">Industry certification programs for IT professionals. Trusted by enterprise teams and government agencies worldwide.</p>
+                <p class="footer-tagline">Vendor-neutral IT certification vouchers with free study materials. Founded by John Ratter after one too many arguments about credential expiry policies.</p>
             </div>
             <div>
                 <div class="footer-heading">Platform</div>
@@ -114,8 +114,8 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <span>&copy; 2026 CeroDias Enterprise Solutions, Inc. Austin, TX. Certifications issued are vendor-neutral and lifetime-valid.</span>
-            <span>Founded 1994. Free forever.</span>
+            <span>&copy; 2026 CeroDias Enterprise Solutions, Inc. Austin, TX. All certifications are vendor-neutral and lifetime-valid.</span>
+            <span>Certification minus all the BS, since 1994.</span>
         </div>
     </footer>
 
