@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function closePanel() {
         panel.classList.remove('open');
         fab.classList.remove('open');
-        fab.setAttribute('title', 'Chat with ARIA');
+        fab.setAttribute('title', 'Chat with CERA');
         document.getElementById('chat-fab-icon').textContent = '\uD83D\uDCAC';
     }
 
@@ -156,7 +156,7 @@ async function loadChatHistory() {
                 addMessageToUI(msg.bot_response, 'bot');
             }
         } else {
-            addMessageToUI("Hi, I'm ARIA — CeroDias's support agent. Ask me about our certifications, pricing, or anything I can help with.", 'bot');
+            addMessageToUI("Hi, I'm CERA — CeroDias's support agent. Ask me about our certifications, pricing, or anything I can help with.", 'bot');
         }
     } catch (err) {
         console.error('Error loading chat history:', err);

@@ -1961,3 +1961,241 @@ h1,h2,h3,h4,h5,h6 {
   .features-grid { grid-template-columns: 1fr; }
   .page-container { padding: 1.25rem 1rem; }
 }
+
+/* ============================================================
+   Profile Dropdown
+   ============================================================ */
+
+.nav-profile {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nav-avatar {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.nav-avatar:hover {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+.nav-profile-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  z-index: 1050;
+  overflow: hidden;
+  animation: ddFadeIn 0.15s ease;
+}
+
+.nav-profile-dropdown.open {
+  display: block;
+}
+
+@keyframes ddFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.profile-dd-header {
+  padding: 0.9rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: #FAFBFC;
+}
+
+.profile-dd-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--navy);
+}
+
+.profile-dd-role {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.profile-dd-item {
+  display: block;
+  padding: 0.6rem 1rem;
+  font-size: 0.88rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.profile-dd-item:hover {
+  background: var(--bg);
+  color: var(--navy);
+  text-decoration: none;
+}
+
+.profile-dd-divider {
+  border-top: 1px solid var(--border);
+  margin: 0.25rem 0;
+}
+
+.profile-dd-signout {
+  color: var(--danger);
+}
+
+.profile-dd-signout:hover {
+  background: #FEF2F2;
+  color: var(--danger);
+}
+
+/* ============================================================
+   Auth Tabs
+   ============================================================ */
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.75rem;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+  user-select: none;
+}
+
+.auth-tab.active {
+  color: var(--navy);
+  border-bottom-color: var(--orange);
+}
+
+.auth-tab-panel { display: none; }
+.auth-tab-panel.active { display: block; }
+
+/* Auth branding extras */
+.auth-branding-tagline {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.01em;
+}
+
+.auth-branding-quote {
+  border-left: 3px solid var(--orange);
+  padding: 0.75rem 1rem;
+  margin: 0 0 1.5rem 0;
+  font-style: italic;
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.7;
+}
+
+.auth-branding-quote cite {
+  display: block;
+  margin-top: 0.5rem;
+  font-style: normal;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ============================================================
+   Checkout Page
+   ============================================================ */
+
+.checkout-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .checkout-layout { grid-template-columns: 1fr; }
+}
+
+.checkout-summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+}
+
+.checkout-summary-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--navy);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.checkout-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  padding: 0.4rem 0;
+  color: var(--text);
+}
+
+.checkout-line-total {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--navy);
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.checkout-note {
+  margin-top: 1.25rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.6;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.payment-declined-banner {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-card);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.5rem;
+  color: var(--danger);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.security-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  line-height: 1.6;
+}
+
+.security-note strong {
+  color: var(--text);
+}

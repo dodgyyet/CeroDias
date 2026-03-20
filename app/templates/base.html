@@ -36,15 +36,24 @@
 
             <div class="navbar-actions">
                 {% if session.get('username') %}
-                    <div class="nav-avatar" title="{{ session.get('username') }}">
-                        {{ session.get('username')[0]|upper }}
+                    <div class="nav-profile" id="nav-profile">
+                        <div class="nav-avatar" id="profile-toggle" title="{{ session.get('username') }}">
+                            {{ session.get('username')[0]|upper }}
+                        </div>
+                        <div class="nav-profile-dropdown" id="profile-dropdown">
+                            <div class="profile-dd-header">
+                                <div class="profile-dd-name">{{ session.get('username') }}</div>
+                                <div class="profile-dd-role">Standard Member</div>
+                            </div>
+                            <a href="/account" class="profile-dd-item">My Account</a>
+                            <a href="/account/settings" class="profile-dd-item">Settings</a>
+                            <a href="/messages" class="profile-dd-item">Messages</a>
+                            <div class="profile-dd-divider"></div>
+                            <a href="/logout" class="profile-dd-item profile-dd-signout">Sign Out</a>
+                        </div>
                     </div>
-                    <a class="nav-link" href="/account" style="font-weight:600; color: rgba(255,255,255,0.9) !important;">
-                        {{ session.get('username') }}
-                    </a>
-                    <a class="nav-link btn-logout" href="/logout">Logout</a>
                 {% else %}
-                    <a class="btn-nav-auth" href="/register">Sign In / Register</a>
+                    <a class="btn-nav-auth" href="/register">Sign In</a>
                 {% endif %}
             </div>
         </div>
@@ -57,7 +66,7 @@
 
     <!-- ── Floating Chatbot (only when logged in) ── -->
     {% if session.get('username') %}
-    <div id="chat-fab" class="chat-fab" title="Chat with ARIA">
+    <div id="chat-fab" class="chat-fab" title="Chat with CERA">
         <span id="chat-fab-icon">&#128172;</span>
     </div>
 
@@ -65,14 +74,14 @@
         <div class="chatbot-header">
             <div class="chatbot-avatar">&#129302;</div>
             <div class="chatbot-header-info">
-                <div class="chatbot-header-title">ARIA <span style="font-weight:400; opacity:0.7; font-size:0.78rem;">/ CeroDias Support</span></div>
+                <div class="chatbot-header-title">CERA <span style="font-weight:400; opacity:0.7; font-size:0.78rem;">/ CeroDias Enterprise Resource Assistant</span></div>
                 <div class="chatbot-header-status">&#x2022; Online</div>
             </div>
             <button class="chatbot-header-close" id="chatbot-close" title="Close">&#10005;</button>
         </div>
         <div id="chatbot-messages" class="chatbot-messages"></div>
         <div class="chatbot-input-group">
-            <input type="text" id="chatbot-input" placeholder="Ask ARIA...">
+            <input type="text" id="chatbot-input" placeholder="Ask CERA...">
             <button id="chatbot-send">Send</button>
         </div>
     </div>
@@ -105,12 +114,29 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <span>&copy; 2026 CeroDias Certmaster. For educational purposes only.</span>
-            <span>Built for security professionals.</span>
+            <span>&copy; 2026 CeroDias Enterprise Solutions, Inc. Austin, TX. Certifications issued are vendor-neutral and lifetime-valid.</span>
+            <span>Founded 1994. Free forever.</span>
         </div>
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
+    <script>
+    (function() {
+        var toggle = document.getElementById('profile-toggle');
+        var dropdown = document.getElementById('profile-dropdown');
+        if (toggle && dropdown) {
+            toggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdown.classList.toggle('open');
+            });
+            document.addEventListener('click', function(e) {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('open');
+                }
+            });
+        }
+    })();
+    </script>
 </body>
 </html>
