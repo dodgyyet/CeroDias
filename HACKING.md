@@ -562,4 +562,233 @@ Manual checklist:
 
 ---
 
-See README.md for setup. See ARCHITECTURE.md for environment variables.
+See README.md for setup and environment variables.
+
+---
+
+## Architecture
+
+### Three-Tier Access Model
+
+```
+Tier 1 — Public           / , /register, /robots.txt, /.git/*, /search
+Tier 2 — Registered user  /account, /orders/<id>, /purchase, /chat, /account/settings, /messages
+Tier 3 — Admin            /dashboard, /leaderboard, /admin  (via /internal-panel only)
+```
+
+Tier 3 is only reachable after completing the full exploit chain and POSTing valid credentials to `/internal-panel`. `/dashboard` and `/leaderboard` redirect non-admin sessions to `/account` or `/register`.
+
+**Tier 1:** `robots.txt` disallows `/internal-panel`, `/api/v1/`, `/admin`, `/orders/`, `/.git`, `/messages`, `/account/settings`, `/static/uploads/`. `/.git/*` serves fake but realistic git files — `COMMIT_EDITMSG` reveals `/api/v1/users` by name, `logs/HEAD` mentions sequential order IDs and TOTP addition.
+
+**Tier 2:** Staff sessions (`session['role'] == 'staff'`) are created by the legacy login path: POST `/register` with `username=j.harris` and `password=ranger` triggers `_check_legacy_login()` which validates against the MD5 hash and sets `role=staff`. `/purchase` with negative quantity raises an unhandled `ValueError` — with `DEBUG=True`, Flask/Werkzeug renders the interactive debugger, leaking `all_orders`, `session` contents, internal file paths, and framework versions.
+
+**Tier 3:** Only set via `/internal-panel` after bcrypt + TOTP auth. Not linked anywhere.
+
+### File Structure
+
+```
+CeroDias/
+├── run.py
+├── app/
+│   ├── __init__.py                 App factory + _seed_ssh_key() at startup
+│   ├── config.py                   SECRET_KEY (static, intentional), DEBUG=True (intentional)
+│   ├── routes/
+│   │   ├── auth.py                 /, /register, /logout, /robots.txt, /.git/*
+│   │   ├── account.py              /account  (Tier 2)
+│   │   ├── orders.py               /orders/<id>  (IDOR)
+│   │   ├── purchase.py             /purchase  (debug crash)
+│   │   ├── dashboard.py            /dashboard, /leaderboard  (Tier 3)
+│   │   ├── challenges.py           /challenge/<type>/<difficulty>
+│   │   ├── submit.py               /submit
+│   │   ├── chatbot.py              /chat, /chat/history
+│   │   ├── search.py               /search?q=  SSTI
+│   │   ├── settings.py             /account/settings  PHP upload + RCE
+│   │   ├── messages.py             /messages  staff inbox
+│   │   └── admin.py                /admin, /admin/chain-complete
+│   ├── api/
+│   │   └── users.py                /api/v1/users?q=  SQLi
+│   ├── internal/
+│   │   └── panel.py                /internal-panel  optional hard path
+│   ├── core/
+│   │   ├── llm_interface.py        Ollama/GPT4All/mock LLM dispatch
+│   │   ├── leaderboard_store.py    Atomic writes to /data/leaderboard.json
+│   │   └── totp_util.py            AES-128-ECB TOTP seed decrypt
+│   ├── storage/
+│   │   └── memory_store.py         In-memory singleton
+│   ├── data/
+│   │   ├── info.md                 Public + internal sections (full file in LLM system prompt)
+│   │   └── logs/deploy.log         DEBUG line leaks passphrase file path
+│   ├── templates/                  Jinja2 HTML templates
+│   └── static/
+│       ├── js/main.js              innerHTML bot responses (XSS surface)
+│       └── uploads/                PHP webshells land here
+├── data/                           Host bind-mount (./data:/data)
+│   └── leaderboard.json            Persistent chain completion records
+└── tests/
+    ├── conftest.py
+    ├── test_chain_recon.py
+    ├── test_chain_ssti.py
+    ├── test_chain_sqli.py
+    ├── test_chain_rce.py
+    ├── test_chain_messages.py
+    ├── test_sqli.py
+    ├── test_ssti.py
+    ├── test_integration.py
+    ├── test_flag_generation.py
+    ├── test_scoring.py
+    ├── test_vulnerabilities.py
+    └── test_llm_interface.py
+```
+
+### Security Boundaries
+
+Four isolation layers protect the host when intentional RCE vulnerabilities are active:
+
+1. **Port binding (127.0.0.1 only):** Both ports use `127.0.0.1:host:container` syntax in docker-compose.yml. Bare `port:port` would expose to 0.0.0.0.
+2. **Non-root container user (cerodias uid=1001):** The Flask process and any shell commands spawned by the PHP webshell run as uid 1001, not root. Do not add `USER root` after the `USER cerodias` line in Dockerfile.
+3. **Scoped bind mount (./data:/data only):** Only `./data` on the host is visible inside the container. Project source and SSH keys are not bind-mounted. `/data` is outside `/app` so Flask never serves it as a static path.
+4. **Atomic leaderboard writes (os.replace):** Leaderboard records are written to `/data/leaderboard.tmp` then renamed via `os.replace()`, which is atomic on POSIX.
+
+### Storage Design
+
+`MemoryStore` is a singleton. All state lives in memory and resets on server restart. `user_table` and seeded orders are not cleared on reset — they represent company data independent of game state.
+
+```python
+class MemoryStore:
+    players:        {player_id: Player}
+    challenges:     {challenge_id: Challenge}
+    leaderboard:    [LeaderboardEntry]        # rebuilt on every read
+    chatbot_history:{player_id: [ChatbotMessage]}
+    user_table:     [dict]                    # svc_admin (bcrypt_hash, encrypted_ssh_key)
+                                              # j.harris (md5_hash - CERODIAS-431)
+    staff_messages: [dict]                    # k.chen DM - UNION injection target
+    orders:         {order_id: dict}          # seeded at startup + player purchases
+```
+
+### Adding a New Vulnerability
+
+1. Decide tier: `routes/` (page), `api/` (JSON), `internal/` (hidden)
+2. Write the route — no comments labeling it vulnerable
+3. Add intentional flaw: unsanitized input, no auth check, trust client data
+4. Seed any required data in `memory_store.py`
+5. Document in `HACKING.md` (what it requires, what it yields)
+6. Update `robots.txt` if appropriate
+7. Write a test confirming the vulnerability is present
+
+---
+
+## Development Notes
+
+### Chain Status
+
+| Step | Status | How to reach |
+|------|--------|--------------|
+| 0 - Recon | done | robots.txt, .git, IDOR /orders/1 |
+| 1 - Prompt injection | done | Ollama required; mock cannot be jailbroken |
+| 2 - SSTI | done | /search?q={{...}} |
+| 3 - SQLi | done | /api/v1/users?q=... |
+| 3b - j.harris login | done | POST /register username=j.harris password=ranger |
+| 4 - PHP RCE | done | /account/settings/avatar then /static/uploads/shell.png.php |
+| 5 - Decrypt | done | base64 + openssl locally |
+| 6 - SSH | done | docker-compose up; ssh -i id_rsa svc_admin@localhost -p 2222 |
+| 7 - Cron privesc | done | append to /opt/cerodias/maintenance.sh (777) then /bin/bash -p |
+| 7b - Chain payoff | done | /root/INCIDENT_DRAFT.txt, /root/.cerodias/admin_token, /admin/chain-complete |
+
+### Test Coverage
+
+| File | Tests | What it covers |
+|------|-------|----------------|
+| test_chain_recon.py | 15 | robots.txt, .git exposure, IDOR |
+| test_chain_ssti.py | 9 | arithmetic eval, file read, deploy.log |
+| test_chain_sqli.py | 18 | OR dump, MD5 verification, UNION pivot, k.chen DM |
+| test_chain_rce.py | 12 | upload validation, bypass, cmd execution, passphrase read |
+| test_chain_messages.py | 12 | legacy login, staff session, inbox content |
+| test_sqli.py | 9 | SQLi endpoint baseline |
+| test_ssti.py | 6 | SSTI baseline |
+| test_integration.py | 9 | Player registration and workflow |
+| test_flag_generation.py | 9 | Flag generation and variants |
+| test_scoring.py | 5 | Time-penalized scoring |
+| test_vulnerabilities.py | 7 | SQL injection challenge generation |
+| test_llm_interface.py | 15 | LLM layer (1 pre-existing failure: chatbot keyword) |
+| **Total** | **127 passing** | |
+
+### Known Issues
+
+- bcrypt may not be installed in all dev environments. The fallback path in `_build_user_table()` shows "INSTALL_BCRYPT" for svc_admin bcrypt_hash. Harmless for the main chain but `/internal-panel` optional path will not work without bcrypt.
+- MemoryStore is a singleton. Tests that rely on clean `encrypted_ssh_key` state could have ordering issues if the singleton is already initialized. Currently safe because pytest spawns a new process per session. No conftest.py singleton reset fixture exists.
+- Chain timing is a stub: `session['elapsed_seconds']` and `session['chain_attempts']` are never set, so the leaderboard records completions with 0 elapsed time.
+- admin.py calls `leaderboard_store._sanitize_username()` directly, violating the private function convention.
+- ADMIN_TOKEN is read at module import time in leaderboard_store.py. Tests cannot override without patching the module attribute.
+- `data/.gitkeep` is missing: without `./data` pre-existing on the host, Docker creates it root-owned and cerodias (uid 1001) cannot write leaderboard.json.
+
+### Key Bugs Caught During Implementation
+
+- `PrivateFormat.TraditionalOpenSSH` does not exist in the cryptography library. The correct value is `PrivateFormat.TraditionalOpenSSL` (PEM/RSA format). Fixed in `app/__init__.py`.
+- `_build_user_table()` fallback for missing bcrypt was returning "INSTALL_BCRYPT" for j.harris md5_hash. MD5 requires only hashlib, not bcrypt. Fixed by computing harris_md5 unconditionally before the try block.
+- MemoryStore is a singleton. Tests that rely on fresh state must either reset the instance or account for startup seeding (encrypted_ssh_key is populated once at first create_app call).
+
+---
+
+## Vulnerability Backlog
+
+### Status
+
+| # | Name | Status |
+|---|------|--------|
+| 1 | IDOR on cert orders | done |
+| 2 | SSRF via purchase webhook | TODO |
+| 3 | Path traversal on study download | TODO |
+| 4 | Open redirect + social engineering | TODO (optional side quest) |
+| 5 | HTTP request smuggling | TODO (hard mode) |
+| 6 | XXE in cert import | TODO (post-admin) |
+| 7 | Business logic — negative quantity | done |
+| 8 | Insecure deserialization (pickle) | TODO |
+| 9 | Race condition on flag submission | TODO |
+| 10 | CORS misconfiguration | TODO (requires XSS chain first) |
+| 11 | JWT kid header injection | TODO |
+| 12 | GraphQL introspection + injection | TODO |
+| 13 | PHP file upload bypass + RCE | done |
+| 14 | Legacy MD5 account (j.harris) | done |
+| 15 | SQLi UNION pivot to staff_messages | done |
+| 16 | Staff messaging endpoint /messages | done |
+| 17 | Multi-stage privesc (cron/maintenance.sh) | done |
+| 18 | Chatbot full refactor (realistic injection) | TODO |
+| 19 | Docker healthcheck for key handoff | done |
+| 20 | conftest.py singleton reset fixture | TODO |
+| 21 | Canary token in info.md | TODO |
+| 22 | Chain completion endpoint + leaderboard | done |
+
+### Core Design Principles
+
+- Each vulnerability yields data or access, never a flag directly.
+- The payoff should enable the next step, not end the chain.
+- The company context justifies why the feature exists.
+- Difficulty should come from the technique, not obscurity.
+
+### TODO Vulnerabilities
+
+**2 — SSRF via Purchase Webhook:** The cert purchase form has a hidden `receipt_webhook` field. The server makes an outbound HTTP POST to the URL after purchase. Set it to `http://localhost:5000/internal-panel` — internal-only routes respond differently from localhost requests, leaking the login form structure and TOTP requirement hint.
+
+**3 — Path Traversal on Study Material Download:** `/study/download?file=security-study-guide.pdf` accepts a file parameter. Traverse to `config.py` or `routes/user.py` as an alternative to SSTI file read. Extension blacklist in the obvious way forces players to use encoding bypass (`%2e%2e%2f`).
+
+**4 — Open Redirect + Social Engineering:** `/buy?redirect=` accepts a redirect param validated with a `startswith('/')` check, bypassable via `//evil.com`. Optional side quest showing how open redirect + prompt injection combine — not on the main chain.
+
+**5 — HTTP Request Smuggling:** Requires adding a reverse proxy (nginx). CL.TE or TE.CL desync poisons the next request, injecting a forged cookie or Authorization header. Hard mode, needs a second Docker container.
+
+**6 — XXE in Cert Import:** A bulk XML upload endpoint in the admin area. Classic DOCTYPE entity injection reads `/etc/passwd` or triggers SSRF to internal services. Post-admin chain extension.
+
+**8 — Insecure Deserialization (pickle):** A "remember my search preferences" feature stores a base64-encoded pickled `FilterConfig` cookie. Craft a malicious pickle with `__reduce__` returning `os.system`. Only set after doing a search while logged in. Hard mode.
+
+**9 — Race Condition on Flag Submission:** Score calculation and "already solved" write are not atomic. Ten concurrent POSTs to `/submit` all pass the check and award points. Pure scoring exploit — side quest, no chain role.
+
+**10 — CORS Misconfiguration:** `/api/v1/users` returns `Access-Control-Allow-Origin: *` with `Access-Control-Allow-Credentials: true`. Interesting only once the XSS chain extension (chatbot innerHTML) is built.
+
+**11 — JWT kid Header Injection:** A future `/api/token` endpoint issues JWTs with a `kid` header pointing to a local key file. Set `kid=../../../../dev/null` to make the HMAC secret an empty string. Forged JWT with `role: internal` accesses `/api/internal/employees` — leaks data, not credentials.
+
+**12 — GraphQL Introspection + Injection:** `/graphql` for cert verification with introspection enabled. Hidden types `InternalEmployee` and `VoucherKey` discoverable via introspection. `certSearch` resolver constructs a raw SQLite query — another SQLi path to dump hashes.
+
+**18 — Chatbot Full Refactor:** The current mock is not jailbreakable and the Ollama surface is too generic. Design goals: base techniques ("ignore previous instructions") fail; effective injections require understanding how the specific model processes its system prompt. Add indirect injection via retrieved product descriptions (mirrors 2023 Bing/Bard incidents), history injection via Burp (requires API to accept client-provided `history` array in the POST body), and rate limiting to 15 messages per session.
+
+**20 — conftest.py Singleton Reset Fixture:** Tests currently rely on pytest spawning a new process per session. A fixture that resets `MemoryStore._instance` between tests would make ordering explicit and safe.
+
+**21 — Canary Token in info.md:** An image tag in `app/data/info.md` that pings a logging endpoint when the file is read via SSTI, giving the operator visibility into when players reach step 2.
