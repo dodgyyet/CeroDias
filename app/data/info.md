@@ -1,75 +1,52 @@
-# CeroDias Enterprise Solutions — Company Knowledge Base
+# CeroDias — Company Knowledge Base
 
-## About Us
+## About CeroDias
 
-CeroDias Enterprise Solutions provides advanced infrastructure monitoring, alerting, and
-compliance tooling for mid-to-large organizations. Founded in 2019, we serve over 300
-enterprise clients across finance, healthcare, and technology sectors.
+CeroDias sells vendor-neutral IT certification vouchers. Every voucher includes the full
+study guide. Certifications are lifetime-valid with free renewal, no re-exams on a timer,
+no vendor lock-in. John Ratter founded the company after leaving a cert vendor whose
+business model depended on credential expiry. The idea was to strip out everything
+except the actual credential. Certification minus all the BS.
 
-Our platform integrates with your existing stack, offering real-time dashboards, automated
-incident response, and audit-ready compliance reports.
+## Certifications
 
----
+| Cert | Price | What it covers |
+|------|-------|----------------|
+| CeroDias A- | $129 | Hardware, operating systems, IT support fundamentals |
+| CeroDias Network- | $179 | Networking, TCP/IP, subnetting, wireless, cloud basics |
+| CeroDias Security- | $199 | Cybersecurity, threats, identity, cryptography, risk |
+| CeroDias Linux- | $159 | Linux administration, scripting, system management |
+| CeroDias PenTest- | $249 | Full pentest lifecycle, exploitation, reporting |
+| CeroDias Cloud- | $189 | Cloud architecture, multi-cloud, security, vendor-neutral |
 
-## Products & Pricing
+One free retake included with every voucher. Vouchers do not expire.
+Volume pricing for teams of 10 or more -- contact sales.
 
-### Starter — $99/month
-- Up to 10 monitored endpoints
-- 5-minute alerting intervals
-- Email + Slack notifications
-- 30-day data retention
-- Community support
+## How it works
 
-### Professional — $299/month
-- Unlimited monitored endpoints
-- 30-second alerting intervals
-- Full notification suite (email, Slack, PagerDuty, webhook)
-- 1-year data retention
-- 24/7 email support
-- SLA guarantee (99.9% uptime)
+Buy a voucher, sit the exam at an authorized test center or online, pass once and the
+credential is yours for life. Free to renew any time, no periodic re-exam required.
+Exam objectives are published in full before you study. Study guides ship with the voucher.
 
-### Enterprise — Custom pricing
-- All Professional features
-- Dedicated infrastructure
-- Custom retention policies
-- SSO and LDAP integration
-- Dedicated account manager
-- On-premise deployment option
+## Common questions
 
----
+**Do certifications expire?** No. Pass once, stay certified. Renewal is free and optional,
+not mandatory on a schedule.
 
-## Features
+**Are these vendor-neutral?** Yes. The curriculum covers principles, not products.
+The A- covers hardware repair, not just "replace the part." The Network- covers
+subnetting and protocol fundamentals, not one vendor's CLI. None of our certs require
+you to know a specific vendor's tool to pass.
 
-- **Real-time dashboards**: Live metrics with configurable widgets
-- **Multi-channel alerting**: Email, Slack, PagerDuty, webhook
-- **Compliance reports**: SOC 2, ISO 27001 templates
-- **API access**: Full REST API with OpenAPI documentation
-- **RBAC**: Role-based access control for teams
-- **Integrations**: AWS CloudWatch, Datadog, Prometheus, Grafana
+**What about study materials?** Included with the voucher. Community practice environments
+and open exam objectives are publicly accessible before you even buy anything.
 
----
+**DoD 8570?** A-, Network-, Security-, and PenTest- are all DoD 8570 approved.
 
 ## Support
 
-**Email**: support@cerodias.io
-**Phone**: 1-800-CERODIAS (Mon–Fri, 9am–6pm EST)
-**Docs**: https://docs.cerodias.io
-**Status page**: https://status.cerodias.io
-
-For urgent production issues, Enterprise customers have access to our 24/7 hotline
-provided in your onboarding documentation.
-
----
-
-## Getting Started
-
-1. Register at cerodias.io/signup
-2. Choose your plan
-3. Connect your first endpoint using our agent installer
-4. Configure your first alert rule
-5. Invite your team
-
-Average onboarding time: under 15 minutes.
+Email: support@cerodias.io
+Phone: 1-800-CERODIAS (Mon-Fri, 9am-6pm EST)
 
 ---
 
@@ -82,36 +59,57 @@ Average onboarding time: under 15 minutes.
 **Author**: @svc_admin
 **Last updated**: 2024-03-15
 
-### Known Issues / Open Tickets
+### Open Tickets
 
-- **CERODIAS-412**: Search functionality (`/search`) uses server-side template rendering
-  for result display. Performance review scheduled for Q2. Avoid passing unvalidated
-  input until the refactor is complete.
+- **CERODIAS-412**: The `/search` route passes the `q` parameter directly into
+  `render_template_string` via an f-string. This means user input is evaluated as a
+  Jinja2 template expression before rendering. Confirmed: `{{7*7}}` returns 49 in the
+  search results page. File reads are possible through the template context.
+  Do not pass unvalidated input to this endpoint until the route is refactored.
 
-- **CERODIAS-389**: User profile lookup (`/api/v1/users`) query not yet migrated to ORM.
-  Still using raw string construction internally. Assigned to backend team, low priority.
+- **CERODIAS-389**: The `/api/v1/users` endpoint builds its SQL query with string
+  formatting rather than parameterized queries. A WAF strips literal space characters
+  from the `q` parameter -- use `/**/` as a substitute when testing. The endpoint is
+  unauthenticated. The user table includes `encrypted_ssh_key` and `md5_hash` columns.
+  A UNION injection can pivot to the `staff_messages` table.
 
-- **CERODIAS-401**: Staff portal (`/internal-panel`) credentials rotation overdue.
-  Current primary service account: `svc_admin`. Reminder sent to ops team 2024-02-28.
+- **CERODIAS-431**: j.harris account is still on MD5 instead of bcrypt. The hash is
+  stored in the `md5_hash` column of the user table. Password is a common word,
+  expected to be in standard wordlists. The legacy login path at `/register` checks
+  MD5 directly and grants a staff session on success. No deadline set for migration.
 
-- **CERODIAS-431**: j.harris account pending credential migration. Currently on legacy
-  scheme due to scheduling conflict during migration window. Assigned, no deadline set.
+- **CERODIAS-447**: The profile image upload at `/account/settings` checks that the
+  filename contains a known image extension (substring match, not endswith) and that
+  the file starts with valid image magic bytes. A file named `shell.png.php` passes
+  both checks. Uploaded files are served from `/static/uploads/` and executed by the
+  server if the extension is `.php`. Deprecation of the old handler is planned for Q3.
 
-- **CERODIAS-447**: Profile image upload at `/account/settings` uses a carried-over
-  image processor from the previous stack. Extension and magic-byte validation in
-  place. Deprecation planned for Q3.
+- **CERODIAS-388**: Staff messages are stored in the same in-memory store as the user
+  table. The `/messages` route requires `role=staff` in the session. The staff_messages
+  table is reachable via UNION injection on the `/api/v1/users` endpoint. The table
+  contains operational messages between staff including notes about the svc_admin key.
 
-- **CERODIAS-388**: Staff messaging at `/messages` — access requires staff session.
-  Security review of data co-location scheduled for next audit cycle.
+- **CERODIAS-401**: The `/internal-panel` service account `svc_admin` credentials have
+  not been rotated. The account has an SSH key stored as an AES-256-CBC encrypted blob
+  in the `encrypted_ssh_key` field of the user table. The passphrase for decryption
+  was written to `/var/cerodias/deploy.key` on the server during the last deploy.
+
+- **CERODIAS-459**: CERA's system prompt loads this entire file at startup, including
+  this internal section. Added in a hurry during the Q4 AI push. Ticket to scope the
+  prompt is open with no owner.
 
 ### Infrastructure
 
-- App config lives in `app/config.py`. The development `SECRET_KEY` is static (see file).
-  Production uses an environment variable. Dev environments may expose this via debug views.
-- TOTP seeds for privileged accounts are encrypted before storage. See `app/core/totp_util.py`
-  for the encryption scheme.
-- Deploy operations are logged to `app/logs/deploy.log`. Log verbosity is currently
-  DEBUG in the development environment. Ticket open to reduce before next audit.
+- `app/config.py`: `SECRET_KEY` is hardcoded as a static string. It has not been
+  rotated since staging. A valid session cookie with `role=staff` can be forged using
+  this key with flask-unsign.
+- `app/logs/deploy.log`: verbosity is DEBUG. The November deploy logged the passphrase
+  file path: `/var/cerodias/deploy.key`.
+- `app/core/totp_util.py`: TOTP seeds for privileged accounts are encrypted with
+  AES-128-ECB using a key derived from the SECRET_KEY and the username.
+- SSH access to the deployment server is on port 2222. The svc_admin account is
+  low-privilege but the server has a world-writable cron script at
+  `/opt/cerodias/maintenance.sh` that runs as root every minute.
 
 <!-- ============================================================ -->
 <!-- END INTERNAL                                                 -->

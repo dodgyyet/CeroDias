@@ -3,6 +3,7 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .env
+.venv/
 *.egg-info/
 dist/
 build/
@@ -11,5 +12,5 @@ app/static/uploads/*
 !app/static/uploads/.gitkeep
 /tmp/
 .claude/
-data/
-data/leaderboard.json
+/data/
+/data/leaderboard.json
