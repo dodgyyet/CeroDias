@@ -296,8 +296,25 @@ Returns k.chen's DM to j.harris:
 The player now has the encrypted blob (phase A) and knows exactly what it is and how
 it was encrypted (phase B). Only the passphrase is missing — it's on the server.
 
-**Parallel path (same result):** Crack j.harris MD5 (`ranger`) → log in as j.harris
-→ `GET /messages` → same k.chen DM without needing the UNION injection.
+**Parallel paths to /messages (all yield the same k.chen DM):**
+
+**Path A — MD5 crack:** Crack j.harris MD5 (`ranger`) from the SQLi dump, then POST to `/register` with those credentials. The legacy login path sets `role=staff` in the session. GET `/messages` shows the DM.
+
+**Path B — Session cookie forgery (Burp Suite):**
+
+The SSTI read of `app/config.py` reveals a hardcoded `SECRET_KEY`. Flask signs session cookies using this key. With the key in hand, use `flask-unsign` to forge a cookie that sets `role=staff`:
+
+```bash
+# Install: pip install flask-unsign
+flask-unsign --sign --cookie '{"player_id": "attacker", "username": "attacker", "role": "staff"}' \
+             --secret 'flask-2b7f3a9c8d1e4f6a'
+```
+
+Replace your session cookie in Burp Suite with the forged value. GET `/messages` now returns 200 with the staff inbox — no MD5 crack needed.
+
+**Why this is realistic:** The SECRET_KEY was never rotated between the staging and production environments. A dev conversation in `staff_messages` (visible via UNION inject) records k.chen flagging this to Marcus Diaz in October 2024 and the response being: deprioritised, no budget this quarter.
+
+**What forgery gets you:** `role=staff` — access to `/messages`. This is the same access j.harris has. It does not grant `internal_admin` — the optional hard path (`/internal-panel`) validates bcrypt/12 and TOTP on the server regardless of what the session cookie claims.
 
 ---
 
@@ -552,7 +569,8 @@ Manual checklist:
 
 | Thing | Why it's a dead end |
 |-------|-------------------|
-| Session cookie forge with SECRET_KEY | `/internal-panel` validates bcrypt + TOTP server-side |
+| Session cookie forge for `internal_admin` | `/internal-panel` validates bcrypt + TOTP server-side — forging `internal_admin=True` in a cookie does not bypass this |
+| Session cookie forge for `role=staff` | This IS a valid parallel path to `/messages` — see Step 3 Path B |
 | Rockyou against bcrypt hash | Password not in rockyou — needs policy-derived wordlist |
 | Raw encrypted TOTP seed | AES encrypted — needs SECRET_KEY + username to decrypt |
 | `/admin` panel | Separate from the chain — resets the game, not the crown jewel |

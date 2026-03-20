@@ -26,6 +26,17 @@ form the chain, none of them unreasonably.
 the customer portal. Their account was flagged for a credential migration eight months
 ago. The ticket is still open.
 
+The account has a second origin that the migration ticket doesn't capture. When the
+customer portal was being tested before v1 launch, j.harris added a direct row to
+the staff user table to seed the portal's customer-facing functionality during QA.
+It was faster than going through the registration UI, and at the time the distinction
+between the staff table and the customer database didn't matter — the portal wasn't
+live yet. When the portal launched, the row was still there. The plan was to clean
+it up in the same sprint as the credential migration. The team was behind on the
+renewal system launch, Marcus had frozen discretionary work, and the sprint came and
+went. j.harris messaged k.chen about it in September. k.chen acknowledged it and
+added it to 431. Nobody followed up.
+
 **svc_admin** - a junior developer account that was granted SSH access to the
 deployment server so it could run automated tasks. Low privilege. Can read its own
 home directory and the application directory. Nothing else. The separation of concerns
@@ -83,6 +94,29 @@ Four months ago, k.chen used the staff messaging system to send j.harris a note 
 a key transfer. The message described where the encrypted private key was stored and
 confirmed the encryption method. It was intended to be private. It sat in the
 messages table, accessible to anyone who could read that table.
+
+### Misstep 2b: The Session Key That Was Never Rotated
+
+When the platform was first deployed, the Flask `SECRET_KEY` was generated once and
+hardcoded in `app/config.py`. The intention was to rotate it before production. It
+was not rotated. The same key that was used in the staging environment went live.
+
+The key controls the integrity of every session cookie the application issues. Flask
+session cookies are cryptographically signed: they cannot be tampered with without
+knowing the key. With the key, they can be forged to claim any session state —
+including a staff role.
+
+k.chen flagged this in a staff message to Marcus Diaz in October 2024. The response
+was that the renewal system launch was two weeks out and there was no budget to pull
+someone off it. The SECRET_KEY rotation was added to the Q1 backlog. The renewal
+system launched. Q1 planning happened. The backlog item was not prioritised.
+
+An attacker who reads `app/config.py` via the SSTI vulnerability has the key. With
+`flask-unsign` and the key, they can generate a valid session cookie claiming
+`role=staff`. This gives them access to the staff messaging system — the same access
+that cracking j.harris's password gives — without needing to crack anything.
+
+The SSTI is the gateway. The SECRET_KEY is one of several things the gateway exposes.
 
 ### Misstep 5: The Script That Should Have Been Reset
 
