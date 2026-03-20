@@ -12,5 +12,5 @@ app/static/uploads/*
 !app/static/uploads/.gitkeep
 /tmp/
 .claude/
-/data/
 /data/leaderboard.json
+/data/leaderboard.json.tmp

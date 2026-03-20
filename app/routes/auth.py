@@ -10,7 +10,6 @@ _ROBOTS = """\
 User-agent: *
 Disallow: /internal-panel
 Disallow: /api/v1/
-Disallow: /admin
 Disallow: /orders/
 Disallow: /.git
 Disallow: /messages

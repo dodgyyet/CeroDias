@@ -1,19 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Error — CeroDias Certmaster{% endblock %}
+{% block title %}
+{% if error_code == 404 %}Not Found{% elif error_code == 403 %}Access Denied{% else %}Error{% endif %}
+ — CeroDias{% endblock %}
 
 {% block content %}
 <div class="error-page">
     <div class="error-content">
-        <div class="error-icon">&#128737;</div>
+        <div class="error-icon">
+            {% if error_code == 403 %}&#128274;{% elif error_code == 500 %}&#128165;{% else %}&#128269;{% endif %}
+        </div>
         <div class="error-code">{{ error_code if error_code else '404' }}</div>
         <div class="error-title">
-            {% if error_code == 404 %}Page Not Found
-            {% elif error_code == 403 %}Access Denied
-            {% elif error_code == 500 %}Server Error
+            {% if error_code == 404 %}Nothing to see here.
+            {% elif error_code == 403 %}Nice try.
+            {% elif error_code == 500 %}That's on us.
             {% else %}Something Went Wrong{% endif %}
         </div>
-        <p class="error-message">{{ error }}</p>
+        <p class="error-message">
+            {% if error_code == 404 %}
+                That page doesn't exist. Or it does, and you just need to look harder.
+            {% elif error_code == 403 %}
+                You don't have access to this page. If you think that's wrong, you probably need to find a different way in.
+            {% elif error_code == 500 %}
+                Server error. We logged it. John will hear about this.
+            {% else %}
+                {{ error }}
+            {% endif %}
+        </p>
         <a href="/" class="btn btn-primary">&#8592; Back to Home</a>
     </div>
 </div>

@@ -18,21 +18,23 @@ import hmac
 DATA_PATH = '/data/leaderboard.json'
 _lock = threading.Lock()
 
-ADMIN_TOKEN = os.environ.get('ADMIN_TOKEN', '')
-
-
 def validate_token(submitted: str) -> bool:
     """Constant-time comparison. Prevents timing-based token guessing."""
-    if not ADMIN_TOKEN:
+    token = os.environ.get('ADMIN_TOKEN', '')
+    if not token:
         return False
     return hmac.compare_digest(
         submitted.encode('utf-8'),
-        ADMIN_TOKEN.encode('utf-8'),
+        token.encode('utf-8'),
     )
 
 
-def _sanitize_username(raw: str) -> str:
+def sanitize_username(raw: str) -> str:
     return re.sub(r'[^a-zA-Z0-9.\-_]', '', raw)[:64]
+
+
+# Keep private alias for internal use
+_sanitize_username = sanitize_username
 
 
 def _sanitize_attempts(raw) -> dict:
@@ -51,7 +53,7 @@ def record_completion(username: str, elapsed_seconds: int, attempts: dict):
     Atomic write: tmp file + os.replace(). Safe on container crash.
     """
     entry = {
-        'username': _sanitize_username(username),
+        'username': sanitize_username(username),
         'elapsed': int(elapsed_seconds),
         'attempts': _sanitize_attempts(attempts),
         'completed_at': int(time.time()),

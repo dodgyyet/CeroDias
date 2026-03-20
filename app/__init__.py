@@ -1,3 +1,4 @@
+import sys
 from flask import Flask
 from app.config import DevelopmentConfig
 
@@ -76,6 +77,28 @@ def _seed_ssh_key(store):
         f.write(public_pem)
 
 
+def _check_llm(app):
+    """Check Ollama is reachable. Warn clearly if not."""
+    from app.core.llm_interface import is_configured, OLLAMA_URL, OLLAMA_MODEL
+    app.config['CERA_ENABLED'] = is_configured()
+    if app.config['CERA_ENABLED']:
+        print(f"  CERA enabled (Ollama at {OLLAMA_URL}, model: {OLLAMA_MODEL})", file=sys.stderr)
+    else:
+        print(
+            "\n"
+            "  CERA chatbot is disabled -- Ollama is not running.\n"
+            "\n"
+            "  To enable it:\n"
+            f"    1. Install Ollama:      https://ollama.com\n"
+            f"    2. Pull a model:        ollama pull {OLLAMA_MODEL}\n"
+            f"    3. Start Ollama:        ollama serve\n"
+            f"    4. Restart this server.\n"
+            "\n"
+            "  The rest of the site works normally without it.\n",
+            file=sys.stderr,
+        )
+
+
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -111,5 +134,26 @@ def create_app(config_class=DevelopmentConfig):
 
     from app.storage.memory_store import MemoryStore
     _seed_ssh_key(MemoryStore.get_instance())
+
+    _check_llm(app)
+
+    @app.context_processor
+    def inject_cera_enabled():
+        return {'cera_enabled': app.config.get('CERA_ENABLED', False)}
+
+    @app.errorhandler(404)
+    def not_found(e):
+        from flask import render_template
+        return render_template('error.html', error_code=404, error='Page not found.'), 404
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        from flask import render_template
+        return render_template('error.html', error_code=403, error='Access denied.'), 403
+
+    @app.errorhandler(500)
+    def server_error(e):
+        from flask import render_template
+        return render_template('error.html', error_code=500, error=str(e)), 500
 
     return app

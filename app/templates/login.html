@@ -139,6 +139,17 @@ function switchTab(tab) {
     document.getElementById('tab-login').classList.toggle('active', tab === 'login');
     document.getElementById('tab-register').classList.toggle('active', tab === 'register');
     document.getElementById('form-action').value = tab;
+    // Disable inputs in the hidden panel so they are excluded from HTML5
+    // validation and are not submitted with the form.
+    var loginInputs = document.querySelectorAll('#panel-login input');
+    var registerInputs = document.querySelectorAll('#panel-register input');
+    loginInputs.forEach(function(el) { el.disabled = (tab !== 'login'); });
+    registerInputs.forEach(function(el) { el.disabled = (tab !== 'register'); });
 }
+// Initialise: disable the register panel inputs on page load.
+(function() {
+    var active = document.getElementById('form-action').value || 'login';
+    switchTab(active);
+})();
 </script>
 {% endblock %}

@@ -9,7 +9,6 @@ services:
       - cerodias_keys:/tmp/cerodias
       - ./data:/data
     environment:
-      - LLM_MODEL=mock
       - ADMIN_TOKEN=cerodias-admin-9f2a4c1b7e3d8a5f
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/robots.txt"]
