@@ -1,9 +1,8 @@
 """
-/api/v1/users — user profile lookup
+/api/v1/users — internal user profile lookup
 
-Looks like a legitimate internal API endpoint. Found only by reading source via SSTI.
-Intentionally vulnerable to SQL injection via f-string query construction.
-See HACKING.md Step 3 for the full exploitation walkthrough.
+Not exposed in public API docs. Used by internal tooling and the admin portal.
+Query by username via the q parameter.
 """
 # NOTE: j.harris still on MD5 — migration to bcrypt pending (CERODIAS-431). bcrypt/12 for all others.
 # NOTE: staff_messages table in same store — staff comms history (CERODIAS-388, security review pending)
@@ -20,16 +19,14 @@ def _has_space(s: str) -> bool:
 
 def _simulate_query(q: str, users: list, messages: list) -> list:
     """
-    Simulates: SELECT * FROM users WHERE username = '<q>'
+    Run the user lookup query against the in-memory store.
 
-    Handles:
-      OR injection    → returns all user rows                ← INTENTIONAL
-      UNION injection → appends staff_messages rows          ← INTENTIONAL
-      Normal input    → returns matching row only
+    Simulates: SELECT * FROM users WHERE username = '<q>'
+    Supports basic filter patterns used by internal tooling.
     """
     q_lower = q.lower()
 
-    # UNION injection — pivot to staff_messages table  ← INTENTIONAL
+    # UNION query — return rows from staff_messages table
     if 'union' in q_lower and 'staff_messages' in q_lower:
         base = users if ("or" in q_lower or "1'='1" in q_lower) else []
         return base + [
@@ -44,7 +41,7 @@ def _simulate_query(q: str, users: list, messages: list) -> list:
             for m in messages
         ]
 
-    # OR injection — dump all users  ← INTENTIONAL
+    # OR condition — return all user rows
     if "'" in q and "or" in q_lower:
         return users
 
@@ -67,6 +64,6 @@ def users():
     table = store.get_user_table()
     messages = store.staff_messages
 
-    query = f"SELECT * FROM users WHERE username = '{q}'"  # ← INTENTIONAL f-string
+    query = f"SELECT * FROM users WHERE username = '{q}'"
     results = _simulate_query(q, table, messages)
     return jsonify({"query": query, "results": results})

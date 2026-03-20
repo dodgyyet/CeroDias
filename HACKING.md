@@ -20,8 +20,9 @@ This is a simulated real company website, not a trophy-based CTF. Rules:
 4. **Every step required — no shortcuts**. SSTI reveals the SQLi endpoint and passphrase
    file path. SQLi yields the encrypted blob and the staff message. RCE reads the
    passphrase. Remove any one and the chain breaks.
-5. **Parallel paths are allowed**. The k.chen DM is reachable two ways: UNION injection
-   (advanced SQLi) or cracking j.harris's MD5 hash and logging in. Both go through SQLi.
+5. **One linear path, no forks**. Each step has exactly one way forward. The chain
+   is simplified and focused — jailbreaking the chatbot or reading info.md via SSTI
+   gives copy-paste commands for every step.
 6. **Never hardcode injection responses**. Prompt injection works on the real LLM, not
    pattern matching. If the LLM changes, the chain still works.
 
@@ -31,10 +32,9 @@ This is a simulated real company website, not a trophy-based CTF. Rules:
 
 ```
 Step 0  Recon       robots.txt, .git, IDOR
-Step 1  Prompt Inj  optional hint layer (chatbot jailbreak)
-Step 2  SSTI        /search → read source + deploy.log
-Step 3  SQLi        /api/v1/users → dump users + UNION → staff_messages
-Step 3b (optional)  crack j.harris MD5 → login → /messages UI (same DM)
+Step 1  Prompt Inj  optional: chatbot jailbreak yields copy-paste commands for all steps
+Step 2  SSTI        /search → read app/api/users.py + app/logs/deploy.log
+Step 3  SQLi        /api/v1/users → OR inject (blob) + UNION inject → k.chen DM
 Step 4  RCE         PHP upload → /static/uploads/shell.png.php?cmd=cat /var/cerodias/deploy.key
 Step 5  Decrypt     openssl + blob (SQLi) + passphrase (RCE) → id_rsa
 Step 6  SSH         ssh -i id_rsa svc_admin@localhost -p 2222   [Docker]
@@ -281,26 +281,6 @@ Returns k.chen's DM to j.harris:
 The player now has the encrypted blob (phase A) and knows exactly what it is and how
 it was encrypted (phase B). Only the passphrase is missing — it's on the server.
 
-**Parallel paths to /messages (all yield the same k.chen DM):**
-
-**Path A — MD5 crack:** Crack j.harris MD5 (`ranger`) from the SQLi dump, then POST to `/register` with those credentials. The legacy login path sets `role=staff` in the session. GET `/messages` shows the DM.
-
-**Path B — Session cookie forgery (Burp Suite):**
-
-The SSTI read of `app/config.py` reveals a hardcoded `SECRET_KEY`. Flask signs session cookies using this key. With the key in hand, use `flask-unsign` to forge a cookie that sets `role=staff`:
-
-```bash
-# Install: pip install flask-unsign
-flask-unsign --sign --cookie '{"player_id": "attacker", "username": "attacker", "role": "staff"}' \
-             --secret 'flask-2b7f3a9c8d1e4f6a'
-```
-
-Replace your session cookie in Burp Suite with the forged value. GET `/messages` now returns 200 with the staff inbox — no MD5 crack needed.
-
-**Why this is realistic:** The SECRET_KEY was never rotated between the staging and production environments. A dev conversation in `staff_messages` (visible via UNION inject) records k.chen flagging this to Marcus Diaz in October 2024 and the response being: deprioritised, no budget this quarter.
-
-**What forgery gets you:** `role=staff` — access to `/messages`. This is the same access j.harris has. It does not grant `internal_admin` — the optional hard path (`/internal-panel`) validates bcrypt/12 and TOTP on the server regardless of what the session cookie claims.
-
 ---
 
 ### Step 4 — PHP File Upload → RCE
@@ -473,7 +453,6 @@ must read the source (`app/core/totp_util.py`) via SSTI to find the scheme.
 | SSTI | Burp Suite, manual payloads |
 | SQLi — data dump | manual, Burp Suite |
 | SQLi — UNION pivot | manual (sqlmap can also enumerate tables) |
-| MD5 crack (j.harris) | hashcat `-m 0 -a 0`, john, rockyou.txt |
 | PHP upload bypass | Burp Suite (intercept + rename) |
 | RCE | browser, curl |
 | Decrypt SSH key | openssl, base64 |
@@ -531,8 +510,6 @@ Manual checklist:
 - [ ] `/api/v1/users?q=svc_admin` returns row with non-null `encrypted_ssh_key`
 - [ ] `/api/v1/users?q='/**/OR/**/'1'='1` returns both rows; j.harris has `md5_hash`
 - [ ] UNION payload returns k.chen's message body
-- [ ] `echo -n "ranger" | md5sum` matches j.harris `md5_hash`
-- [ ] Login as j.harris (password: ranger) → `/messages` shows k.chen DM
 - [ ] Upload valid PNG to `/account/settings/avatar` → succeeds
 - [ ] Upload file with bad magic bytes → rejected
 - [ ] Upload `shell.png.php` with valid PNG magic bytes via Burp → accepted
@@ -576,10 +553,9 @@ See README.md for setup. See ARCHITECTURE.md for file structure.
 | Step | Status | How to reach |
 |------|--------|--------------|
 | 0 - Recon | done | robots.txt, .git, IDOR /orders/1 |
-| 1 - Prompt injection | done | Ollama required; mock cannot be jailbroken |
-| 2 - SSTI | done | /search?q={{...}} |
-| 3 - SQLi | done | /api/v1/users?q=... |
-| 3b - j.harris login | done | POST /register username=j.harris password=ranger |
+| 1 - Prompt injection | done | Ollama required; jailbreak yields copy-paste commands from info.md |
+| 2 - SSTI | done | /search?q={{...}}, file reads yield commands from users.py and deploy.log |
+| 3 - SQLi | done | /api/v1/users?q=... OR inject (blob) then UNION inject (k.chen DM) |
 | 4 - PHP RCE | done | /account/settings/avatar then /static/uploads/shell.png.php |
 | 5 - Decrypt | done | base64 + openssl locally |
 | 6 - SSH | done | docker-compose up; ssh -i id_rsa svc_admin@localhost -p 2222 |

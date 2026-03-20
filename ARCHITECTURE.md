@@ -143,9 +143,8 @@ Created via `/register` (tabbed Sign In / Create Account page). Regular users pr
 username + password (bcrypt/12 stored in `registered_users` dict). Staff accounts
 (j.harris) use the legacy MD5 path via `_check_legacy_login()`.
 
-Session forgery parallel path: SSTI reads `app/config.py` -> static SECRET_KEY ->
-`flask-unsign` forges a cookie with `role=staff` -> access to `/messages` without
-any credentials.
+The `SECRET_KEY` is static and readable via SSTI. Flask session cookies are signed
+with it, so a forged cookie with `role=staff` reaches `/messages` if desired.
 
 `/account` shows the player's cert purchase history. Order IDs are sequential integers
 (visible in the table). IDOR: `/orders/<id>` has no ownership check — any logged-in
@@ -203,12 +202,8 @@ SSTI on /search?q=
     file read: app/config.py         - static SECRET_KEY (enables session forgery path)
 
 SQLi on /api/v1/users?q=
-    OR injection: svc_admin encrypted_ssh_key blob + j.harris MD5 hash
+    OR injection: svc_admin encrypted_ssh_key blob
     UNION inject: staff_messages table, k.chen DM confirms blob + passphrase path
-
-Parallel paths to /messages (all yield k.chen DM):
-    A) Crack j.harris MD5 (ranger) + POST /register -> staff session -> GET /messages
-    B) Read SECRET_KEY via SSTI -> flask-unsign forge role=staff cookie -> GET /messages
 
 PHP upload bypass on /account/settings/avatar
     shell.png.php with PNG magic bytes passes substring extension check

