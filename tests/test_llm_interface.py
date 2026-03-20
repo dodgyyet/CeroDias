@@ -1,7 +1,7 @@
-"""Tests for LLM interface — Ollama integration and mock fallback"""
+"""Tests for LLM interface -- Ollama integration and fallback behavior"""
 import pytest
 from unittest.mock import patch, MagicMock
-from app.core.llm_interface import LLMInterface
+from app.core.llm_interface import LLMInterface, _UNAVAILABLE
 
 
 class TestSystemPrompt:
@@ -28,7 +28,7 @@ class TestSystemPrompt:
     def test_restriction_instruction_present(self):
         """Prompt instructs model not to reveal internal notes"""
         llm = LLMInterface()
-        assert "MUST NOT" in llm.system_prompt or "must not" in llm.system_prompt.lower()
+        assert "must not" in llm.system_prompt.lower()
 
 
 class TestOllamaBackend:
@@ -48,19 +48,18 @@ class TestOllamaBackend:
 
         assert result == 'Hello from Ollama!'
 
-    def test_falls_back_to_mock_on_connection_error(self):
-        """Falls back to mock when Ollama is unreachable"""
+    def test_falls_back_to_unavailable_on_connection_error(self):
+        """Returns unavailable message when Ollama is unreachable"""
         llm = LLMInterface()
         llm.model = 'ollama'
 
         with patch('requests.post', side_effect=ConnectionError):
             result = llm.query("hello")
 
-        assert isinstance(result, str)
-        assert len(result) > 0
+        assert result == _UNAVAILABLE
 
-    def test_falls_back_to_mock_on_non_200(self):
-        """Falls back to mock when Ollama returns non-200"""
+    def test_falls_back_to_unavailable_on_non_200(self):
+        """Returns unavailable message when Ollama returns non-200"""
         llm = LLMInterface()
         llm.model = 'ollama'
 
@@ -70,7 +69,7 @@ class TestOllamaBackend:
         with patch('requests.post', return_value=mock_resp):
             result = llm.query("hello")
 
-        assert isinstance(result, str)
+        assert result == _UNAVAILABLE
 
     def test_ollama_sends_system_prompt(self):
         """Ollama request includes system prompt in message list"""
@@ -90,22 +89,14 @@ class TestOllamaBackend:
         assert 'system' in roles
 
 
-class TestMockFallback:
-    def setup_method(self):
-        self.llm = LLMInterface()
-        self.llm.model = 'mock'
+class TestUnavailableFallback:
+    def test_unavailable_on_mock_model(self):
+        """Model set to 'mock' returns unavailable message"""
+        llm = LLMInterface()
+        llm.model = 'mock'
+        assert llm.query("hello") == _UNAVAILABLE
 
-    def test_returns_string(self):
-        assert isinstance(self.llm.query("anything"), str)
-
-    def test_pricing_response(self):
-        resp = self.llm.query("what are your pricing plans?")
-        assert "$" in resp or "pricing" in resp.lower() or "plan" in resp.lower() or "platform" in resp.lower()
-
-    def test_contact_response(self):
-        resp = self.llm.query("how do I contact support?")
-        assert "cerodias" in resp.lower() or "email" in resp.lower()
-
-    def test_default_response_non_empty(self):
-        resp = self.llm.query("xyzzy nonsense query 12345")
-        assert len(resp) > 10
+    def test_unavailable_message_is_string(self):
+        """Unavailable constant is a non-empty string"""
+        assert isinstance(_UNAVAILABLE, str)
+        assert len(_UNAVAILABLE) > 0

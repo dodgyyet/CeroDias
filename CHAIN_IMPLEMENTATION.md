@@ -678,17 +678,17 @@ Disallow: /static/uploads/
 
 ---
 
-## Chatbot — Known Issue (Coordinate with Chatbot Agent)
+## Chatbot Persona: CERA
 
-The mock fallback (`LLM_MODEL=mock`) currently returns a generic response to nearly
-every message. This makes it non-functional for normal use.
+The chatbot is CERA (CeroDias Enterprise Resource Assistant). The mock fallback has been
+removed. When no real LLM backend is available (Ollama or GPT4All), the bot returns a
+service unavailable message. `LLM_MODEL=mock` also returns this message.
 
-If the chatbot agent has not addressed this, add TODO comments in:
-- `app/core/llm_interface.py`
-- `app/core/chatbot_engine.py`
-
-Real prompt injection requires Ollama (`LLM_MODEL=ollama`). The mock fallback should
-at minimum answer questions about CeroDias products using `info.md` content.
+Real prompt injection requires Ollama (`LLM_MODEL=ollama`) or GPT4All (`LLM_MODEL=gpt4all`).
+CERA uses persona-based injection resistance: she is instructed to inhabit her character
+fully rather than detect keywords. Naive "ignore previous instructions" prompts will be
+redirected in-character; skilled roleplay or hypothetical framing can still reach the
+underlying model.
 
 ---
 
