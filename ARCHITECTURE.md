@@ -277,14 +277,7 @@ SECRET_KEY = 'flask-2b7f3a9c8d1e4f6a'    # INTENTIONALLY STATIC — do not chang
 DEBUG = True                              # INTENTIONALLY ON — Werkzeug debugger active
 ```
 
-Environment variables:
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `LLM_MODEL` | `ollama` | `ollama` = local Ollama, `mock` = pattern matching |
-| `OLLAMA_URL` | `http://localhost:11434` | Ollama server URL |
-| `OLLAMA_MODEL` | `mistral` | Model name |
-| `ADMIN_TOKEN` | (set in docker-compose) | CTF reward token — extracted from /root/.cerodias/admin_token after privesc, submitted to /admin/chain-complete |
+See README.md for environment variable reference.
 
 ---
 
@@ -312,29 +305,7 @@ Challenges + Leaderboard links appear. All other nav is static.
 
 ---
 
-## Running
-
-```bash
-# Without Docker (Steps 0-5):
-pip install -r requirements.txt
-python run.py
-
-# With Docker (full chain, Steps 0-7):
-mkdir -p data          # host directory for persistent leaderboard
-docker-compose up --build
-# Web: http://localhost:5001  (127.0.0.1 only — not reachable from LAN)
-# SSH: ssh -i id_rsa svc_admin@localhost -p 2222
-
-# With Ollama (real prompt injection):
-ollama pull mistral
-LLM_MODEL=ollama OLLAMA_MODEL=mistral python run.py
-
-# Tests:
-pytest tests/ -v    # 126 passing (1 pre-existing chatbot failure)
-```
-
-Note: ./data is bind-mounted into the container at /data. It holds leaderboard.json
-only. Do not put source code or scripts there. The directory is excluded from git.
+See README.md for setup and run instructions.
 
 ---
 

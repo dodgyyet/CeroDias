@@ -168,29 +168,4 @@
 
 ---
 
-## How to Run
-
-**Without Docker (Steps 0-5):**
-```bash
-pip install -r requirements.txt
-python run.py
-# Visit http://localhost:5001
-```
-
-**With Docker (Full chain, Steps 0-7):**
-```bash
-docker-compose up --build
-# Web: http://localhost:5001
-# SSH: ssh -i id_rsa svc_admin@localhost -p 2222  (after decrypting the key)
-```
-
-**With Ollama (Real prompt injection, Step 1):**
-```bash
-ollama pull mistral
-LLM_MODEL=ollama OLLAMA_MODEL=mistral python run.py
-```
-
-**Tests:**
-```bash
-pytest tests/ -v    # 126 passing, 1 pre-existing failure
-```
+See README.md for setup and run instructions.

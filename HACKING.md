@@ -562,31 +562,4 @@ Manual checklist:
 
 ---
 
-## Environment
-
-```bash
-# Run without Docker (Steps 0-5 only):
-pip install -r requirements.txt
-python run.py
-
-# Run with Docker (full chain, Steps 0-7):
-docker-compose up --build
-# Web: http://localhost:5001
-# SSH: ssh -i id_rsa svc_admin@localhost -p 2222
-
-# Run with GPT4All (real prompt injection, no separate server, ~4.1GB download):
-LLM_MODEL=gpt4all python run.py
-
-# Run with Ollama (real prompt injection, Step 1):
-ollama pull mistral
-LLM_MODEL=ollama OLLAMA_MODEL=mistral python run.py
-
-# Run tests:
-pytest tests/ -v
-```
-
-Dependencies for the full chain:
-```
-bcrypt         — hash cracking target generation
-pycryptodome   — TOTP seed AES encryption/decryption
-```
+See README.md for setup. See ARCHITECTURE.md for environment variables.
