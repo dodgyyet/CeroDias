@@ -96,33 +96,71 @@ def git_exposure(filename):
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
+    from app.storage.memory_store import MemoryStore
     if request.method == 'POST':
+        action = request.form.get('action', 'login')
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
-        if password:
+
+        if action == 'register':
+            # Validate inputs
+            if not username or len(username) < 3:
+                return render_template('login.html', error='Username must be at least 3 characters.', active_tab='register')
+            if not password or len(password) < 8:
+                return render_template('login.html', error='Password must be at least 8 characters.', active_tab='register')
+            confirm = request.form.get('confirm_password', '')
+            if password != confirm:
+                return render_template('login.html', error='Passwords do not match.', active_tab='register')
+
+            store = MemoryStore.get_instance()
+            # Prevent registration with staff usernames
+            is_staff = any(u['username'] == username for u in store.user_table)
+            if is_staff:
+                return render_template('login.html', error='That username is not available.', active_tab='register')
+            if store.registered_user_exists(username):
+                return render_template('login.html', error='Username already taken.', active_tab='register')
+
+            try:
+                import bcrypt
+                pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt(12)).decode()
+            except ImportError:
+                return render_template('login.html', error='Registration is temporarily unavailable.', active_tab='register')
+
+            player = session_manager.create_player(username)
+            store.add_registered_user(username, pw_hash)
+            session['player_id'] = player.id
+            session['username'] = player.username
+            return redirect(url_for('account.account'))
+
+        else:
+            # Login flow
             ok, role = _check_legacy_login(username, password)
             if ok:
                 session['player_id'] = username
                 session['username'] = username
                 session['role'] = role
                 return redirect(url_for('account.account'))
-            else:
-                from app.storage.memory_store import MemoryStore
-                store = MemoryStore.get_instance()
-                is_known = any(u['username'] == username for u in store.user_table)
-                if is_known:
-                    return render_template('login.html', error="Invalid credentials.")
-        if not username:
-            return render_template('login.html', error='Username is required')
-        try:
-            player = session_manager.create_player(username)
-            session['player_id'] = player.id
-            session['username'] = player.username
-            # Tier 2: registered users land on /account, not /dashboard
-            return redirect(url_for('account.account'))
-        except ValueError as e:
-            return render_template('login.html', error=str(e))
-    return render_template('login.html')
+
+            store = MemoryStore.get_instance()
+            pw_hash = store.get_registered_user_hash(username)
+            if pw_hash:
+                try:
+                    import bcrypt
+                    if bcrypt.checkpw(password.encode(), pw_hash.encode()):
+                        player = store.get_player_by_username(username)
+                        if player:
+                            session['player_id'] = player.id
+                        else:
+                            session['player_id'] = username
+                        session['username'] = username
+                        return redirect(url_for('account.account'))
+                except ImportError:
+                    pass
+
+            return render_template('login.html', error='Invalid credentials.', active_tab='login')
+
+    active_tab = request.args.get('active_tab', 'login')
+    return render_template('login.html', active_tab=active_tab)
 
 
 @bp.route('/logout')

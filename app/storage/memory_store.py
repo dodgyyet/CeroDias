@@ -46,6 +46,13 @@ def _build_staff_messages():
     Readable via SQLi UNION injection on /api/v1/users.  ← INTENTIONAL
     The k.chen → j.harris thread is the chain pivot:
     it confirms what the encrypted_ssh_key blob is and where the passphrase lives.
+
+    Additional messages add lore context:
+    - j.harris accidentally left their dev test account in the staff user table
+      from portal launch testing. Never cleaned up. CERODIAS-431 covers both
+      the MD5 migration and removing the stale entry.
+    - k.chen notes the session token is not rotated between environments,
+      meaning the static SECRET_KEY means forged cookies work across deploys.
     """
     return [
         {
@@ -69,6 +76,52 @@ def _build_staff_messages():
             "sent_at": "2024-11-15 11:47",
             "subject": "Re: svc_admin key",
             "body": "Got it, pulled. All good.",
+        },
+        {
+            "id": 3,
+            "sender": "j.harris",
+            "recipient": "k.chen",
+            "sent_at": "2024-09-08 14:22",
+            "subject": "my test account still in user table",
+            "body": (
+                "Hey — reminder that I still have a row in the user_table from "
+                "when I was testing the portal before v1 launch. I added it "
+                "directly to seed the customer-facing stuff and never pulled it. "
+                "It's got my old MD5 hash from the dev environment. Meant to "
+                "clean it up in the same sprint as the credential migration but "
+                "we ran out of runway. Should probably be in 431. — J"
+            ),
+        },
+        {
+            "id": 4,
+            "sender": "k.chen",
+            "recipient": "j.harris",
+            "sent_at": "2024-09-08 16:55",
+            "subject": "Re: my test account still in user table",
+            "body": (
+                "Yeah I saw it. Not urgent — the endpoint isn't public-facing "
+                "and the WAF blocks the obvious stuff. Adding it to 431 scope "
+                "so it gets cleaned in the same pass as the hash upgrade. "
+                "Also unrelated: we never rotated SECRET_KEY between staging "
+                "and prod when we cut over. It's hardcoded in config.py. "
+                "Low priority right now given the budget situation but flagging "
+                "it — if someone reads that file they can forge session cookies. "
+                "Will raise separately. — K"
+            ),
+        },
+        {
+            "id": 5,
+            "sender": "m.diaz",
+            "recipient": "k.chen",
+            "sent_at": "2024-10-01 10:07",
+            "subject": "Re: SECRET_KEY rotation",
+            "body": (
+                "K, saw your note. Agreed on the risk but we're two weeks from "
+                "the renewal system launch and I can't pull anyone off that. "
+                "The endpoint isn't exposed externally and we don't have the "
+                "budget for a proper secrets rotation this quarter. "
+                "Log it in the backlog and we'll pick it up in Q1. — Marcus"
+            ),
         },
     ]
 
@@ -131,6 +184,7 @@ class MemoryStore:
             self.user_table = _build_user_table()
             self.orders = _build_orders()
             self.staff_messages = _build_staff_messages()
+            self.registered_users = {}
             self._initialized = True
 
     @classmethod
@@ -163,7 +217,16 @@ class MemoryStore:
         return None
 
     def username_exists(self, username):
-        return self.get_player_by_username(username) is not None
+        return self.get_player_by_username(username) is not None or username in self.registered_users
+
+    def add_registered_user(self, username, pw_hash):
+        self.registered_users[username] = pw_hash
+
+    def get_registered_user_hash(self, username):
+        return self.registered_users.get(username)
+
+    def registered_user_exists(self, username):
+        return username in self.registered_users
 
     def add_challenge(self, challenge):
         self.challenges[challenge.id] = challenge

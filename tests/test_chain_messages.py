@@ -126,19 +126,19 @@ class TestLegacyLogin:
         )
         assert b"Invalid credentials" in resp.data or b"error" in resp.data.lower()
 
-    def test_new_player_without_password_still_registers(self, app):
+    def test_new_player_without_password_requires_password(self, app):
         """
-        Normal player registration (no password field) still works.
-        The legacy login check is skipped when password is empty.
+        Registration now requires a password. Submitting only a username
+        returns the login page with an error, not a redirect.
         """
         with app.test_client() as c:
             resp = c.post(
                 REGISTER_URL,
-                data={"username": "brand_new_player_xyz"},
+                data={"username": "brand_new_player_xyz", "action": "register"},
                 follow_redirects=False,
             )
-        # Successful registration redirects to /account
-        assert resp.status_code in (301, 302)
+        # Missing password returns 200 (form error), not a redirect
+        assert resp.status_code == 200
 
 
 class TestMessagesContent:

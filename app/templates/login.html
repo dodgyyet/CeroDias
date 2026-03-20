@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Sign Up — CeroDias Certmaster{% endblock %}
+{% block title %}Sign In — CeroDias{% endblock %}
 
 {% block content %}
 <div class="auth-container">
@@ -8,62 +8,137 @@
         <!-- Left panel — Branding -->
         <div class="auth-branding">
             <div class="auth-branding-logo">CeroDias<span class="brand-dot">.</span></div>
-            <h2>Start Your Security Journey</h2>
-            <p>Join thousands of learners practicing real-world penetration testing skills in a safe, legal environment.</p>
+            <div class="auth-branding-tagline">Your credential. Forever.</div>
+            <blockquote class="auth-branding-quote">
+                "We left because we believed certification should serve the professional, not the other way around. CeroDias was built so that passing once is enough — for life."
+                <cite>— Marcus Cero &amp; Ana Diaz, founders, 1994</cite>
+            </blockquote>
             <div class="branding-features">
                 <div class="branding-feature">
                     <span class="check-mark">&#10003;</span>
-                    <span>Real vulnerable applications to exploit</span>
+                    <span>Free lifetime renewal on all certifications</span>
                 </div>
                 <div class="branding-feature">
                     <span class="check-mark">&#10003;</span>
-                    <span>Earn points and climb the leaderboard</span>
+                    <span>Open exam objectives published in full</span>
                 </div>
                 <div class="branding-feature">
                     <span class="check-mark">&#10003;</span>
-                    <span>AI-powered assistant for guided hints</span>
+                    <span>Zero data brokering — your history is yours</span>
                 </div>
                 <div class="branding-feature">
                     <span class="check-mark">&#10003;</span>
-                    <span>CompTIA Security+ aligned challenges</span>
+                    <span>Vendor-neutral by design, since 1994</span>
                 </div>
             </div>
         </div>
 
-        <!-- Right panel — Form -->
+        <!-- Right panel — Tabs -->
         <div class="auth-form-container">
             <div class="auth-form">
-                <h2>Create Your Account</h2>
-                <p class="form-subtitle">Choose a username to get started — no email required.</p>
 
                 {% if error %}
                     <div class="alert alert-danger">{{ error }}</div>
                 {% endif %}
 
-                <form method="POST">
-                    <div class="form-group">
-                        <label for="username" class="form-label">Username</label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="username"
-                            name="username"
-                            placeholder="e.g. darkhopper99"
-                            required
-                            minlength="3"
-                            autocomplete="username"
-                        >
-                        <small class="form-text">Minimum 3 characters. This is your public handle on the leaderboard.</small>
+                <!-- Tab nav -->
+                <div class="auth-tabs">
+                    <div class="auth-tab {% if active_tab != 'register' %}active{% endif %}" id="tab-login" onclick="switchTab('login')">Sign In</div>
+                    <div class="auth-tab {% if active_tab == 'register' %}active{% endif %}" id="tab-register" onclick="switchTab('register')">Create Account</div>
+                </div>
+
+                <!-- Shared form -->
+                <form method="POST" id="auth-form">
+                    <input type="hidden" name="action" id="form-action" value="{{ active_tab if active_tab == 'register' else 'login' }}">
+
+                    <!-- Sign In panel -->
+                    <div class="auth-tab-panel {% if active_tab != 'register' %}active{% endif %}" id="panel-login">
+                        <div class="form-group">
+                            <label for="login-username" class="form-label">Username</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="login-username"
+                                name="username"
+                                placeholder="Enter your username"
+                                autocomplete="username"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password" class="form-label">Password</label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                id="login-password"
+                                name="password"
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block btn-lg">Sign In</button>
+                        <div class="auth-footer" style="margin-top: 1rem;">
+                            <p>Don't have an account? <a href="#" onclick="switchTab('register'); return false;">Create one &rarr;</a></p>
+                        </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-block btn-lg">Get Started &rarr;</button>
+                    <!-- Register panel -->
+                    <div class="auth-tab-panel {% if active_tab == 'register' %}active{% endif %}" id="panel-register">
+                        <div class="form-group">
+                            <label for="reg-username" class="form-label">Username</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="reg-username"
+                                name="username"
+                                placeholder="Choose a username (min 3 chars)"
+                                minlength="3"
+                                autocomplete="username"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-password" class="form-label">Password</label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                id="reg-password"
+                                name="password"
+                                placeholder="Choose a password (min 8 chars)"
+                                minlength="8"
+                                autocomplete="new-password"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-confirm" class="form-label">Confirm Password</label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                id="reg-confirm"
+                                name="confirm_password"
+                                placeholder="Repeat your password"
+                                autocomplete="new-password"
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block btn-lg">Create Account</button>
+                        <div class="auth-footer" style="margin-top: 1rem;">
+                            <p>Already have an account? <a href="#" onclick="switchTab('login'); return false;">Sign in</a></p>
+                        </div>
+                    </div>
                 </form>
 
-                <div class="auth-footer">
-                    <p>Already playing? <a href="/">Back to Home</a></p>
-                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tab) {
+    document.getElementById('panel-login').classList.toggle('active', tab === 'login');
+    document.getElementById('panel-register').classList.toggle('active', tab === 'register');
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    document.getElementById('form-action').value = tab;
+}
+</script>
 {% endblock %}
